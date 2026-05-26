@@ -1,0 +1,157 @@
+<div class="settings-container">
+  <!-- CABEÇALHO -->
+  <div class="header-card">
+    <div class="header-title">
+     <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+      <h1>Definições</h1>
+    </div>
+    <p class="header-subtitle">Gere a tua conta, privacidade e políticas.</p>
+  </div>
+
+  <!-- CONTA -->
+  <div class="section-card">
+    <div class="section-header">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+      </svg>
+      <h2>Conta</h2>
+    </div>
+    <div class="account-info">
+      <p class="account-email">Sessão iniciada como <strong>{{ currentEmail }}</strong></p>
+      <button class="logout-btn" (click)="logout()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+        Sair
+      </button>
+    </div>
+  </div>
+
+  <!-- PRIVACIDADE -->
+  <div class="section-card">
+    <div class="section-header">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+      </svg>
+      <h2>Privacidade</h2>
+    </div>
+    
+    <div class="setting-group">
+      <label class="setting-label">Visibilidade do perfil</label>
+      <div class="select-wrapper">
+        <select [(ngModel)]="privacy.profileVisibility" (change)="updatePrivacy()" class="setting-select">
+          <option value="publico">🌍 Público — qualquer pessoa pode ver</option>
+          <option value="privado">🔒 Privado — só amigos podem ver</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="toggle-group">
+      <span class="toggle-label">Mostrar o meu email no perfil</span>
+      <label class="toggle-switch">
+        <input type="checkbox" [(ngModel)]="privacy.showEmail" (change)="updatePrivacy()">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+
+    <div class="toggle-group">
+      <span class="toggle-label">Permitir que me encontrem pelo email</span>
+      <label class="toggle-switch">
+        <input type="checkbox" [(ngModel)]="privacy.searchableByEmail" (change)="updatePrivacy()">
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- POLÍTICAS -->
+  <div class="section-card">
+    <div class="section-header">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 4h16v16H4z"></path>
+        <line x1="8" y1="9" x2="16" y2="9"></line>
+        <line x1="8" y1="13" x2="16" y2="13"></line>
+        <line x1="8" y1="17" x2="12" y2="17"></line>
+      </svg>
+      <h2>Políticas</h2>
+    </div>
+    <div class="policy-buttons">
+      <button class="policy-btn" (click)="openTermosModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M4 4h16v16H4z"></path>
+          <line x1="8" y1="9" x2="16" y2="9"></line>
+          <line x1="8" y1="13" x2="16" y2="13"></line>
+          <line x1="8" y1="17" x2="12" y2="17"></line>
+        </svg>
+        Termos de uso
+      </button>
+      <button class="policy-btn" (click)="openPrivacidadeModal()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+        </svg>
+        Política de privacidade
+      </button>
+    </div>
+  </div>
+
+  <!-- MODAL TERMOS DE USO -->
+  <div class="modal-overlay" *ngIf="showTermosModal" (click)="closeTermosModalOnBackdrop($event)">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Termos de Uso</h2>
+        <button class="modal-close" (click)="closeTermosModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p>Ao usar o NzolaNet aceitas:</p>
+        <ul>
+          <li>Não publicar conteúdo ofensivo, discriminatório ou ilegal.</li>
+          <li>Respeitar a privacidade de outros utilizadores.</li>
+          <li>Não criar contas falsas ou impersonar terceiros.</li>
+          <li>O NzolaNet pode suspender contas que violem estas regras.</li>
+          <li>Tens 13 ou mais anos de idade.</li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-primary" (click)="closeTermosModal()">Entendi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL POLÍTICA DE PRIVACIDADE -->
+  <div class="modal-overlay" *ngIf="showPrivacidadeModal" (click)="closePrivacidadeModalOnBackdrop($event)">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Política de Privacidade</h2>
+        <button class="modal-close" (click)="closePrivacidadeModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Como tratamos os teus dados:</strong></p>
+        <ul>
+          <li><strong>Dados recolhidos:</strong> nome, email, foto de perfil e publicações.</li>
+          <li><strong>Uso:</strong> autenticação, exibição do perfil e melhoria do serviço.</li>
+          <li><strong>Partilha:</strong> nunca vendemos os teus dados a terceiros.</li>
+          <li><strong>Visibilidade:</strong> podes definir o teu perfil como público ou privado.</li>
+          <li><strong>Direitos:</strong> podes editar, exportar ou eliminar a tua conta a qualquer momento.</li>
+          <li><strong>Cookies:</strong> usamos cookies essenciais para manter a sessão.</li>
+        </ul>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn-primary" (click)="closePrivacidadeModal()">Entendi</button>
+      </div>
+    </div>
+  </div>
+</div>

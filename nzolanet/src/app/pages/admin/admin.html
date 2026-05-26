@@ -1,0 +1,356 @@
+<div class="admin-container">
+  <!-- HEADER -->
+  <header class="admin-header">
+    <div class="admin-header-content">
+      <div class="admin-logo">
+        <div class="admin-logo-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.8">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+        </div>
+        <span class="admin-logo-text">NzolaNet Admin</span>
+      </div>
+      <div class="admin-header-actions">
+        <div class="reports-alert" *ngIf="pendingReportsCount > 0" (click)="setActiveTab('reports')">
+          <div class="alert-badge">
+            <span class="alert-icon">🚨</span>
+            <span class="alert-count">{{ pendingReportsCount }}</span>
+          </div>
+          <span class="alert-text">{{ pendingReportsCount }} denúncia(s) pendente(s)</span>
+        </div>
+        
+        <div class="admin-user-info">
+          <img [src]="currentUser.avatar" class="admin-user-avatar">
+          <span class="admin-user-name">{{ currentUser.name }}</span>
+        </div>
+        <button class="admin-logout-btn" (click)="logout()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Sair
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="admin-layout">
+    <!-- SIDEBAR -->
+    <aside class="admin-sidebar">
+      <nav class="admin-nav">
+        <button class="admin-nav-item" [class.active]="activeTab === 'users'" (click)="setActiveTab('users')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <span>Utilizadores</span>
+        </button>
+        <button class="admin-nav-item" [class.active]="activeTab === 'reports'" (click)="setActiveTab('reports')">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          </svg>
+          <span>Denúncias</span>
+          <span class="nav-badge warning" *ngIf="pendingReportsCount > 0">{{ pendingReportsCount }}</span>
+        </button>
+      </nav>
+    </aside>
+
+    <!-- MAIN CONTENT -->
+    <main class="admin-main">
+      <!-- TAB UTILIZADORES -->
+      <div class="admin-content" *ngIf="activeTab === 'users'">
+        <div class="content-header">
+          <h2>Utilizadores</h2>
+          <div class="search-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" [(ngModel)]="searchUserTerm" placeholder="Pesquisar utilizador..." class="search-input">
+          </div>
+        </div>
+        
+        <div class="content-card">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Utilizador</th>
+                <th>Email</th>
+                <th>Privacidade</th>
+                <th>Estado</th>
+                <th>Papel</th>
+                <th>Posts</th>
+                <th class="actions-header">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let user of filteredUsers">
+                <td class="user-cell">
+                  <div class="user-info">
+                    <img [src]="user.avatar" class="user-avatar">
+                    <div>
+                      <div class="user-name">{{ user.name }}</div>
+                      <div class="user-handle">{{ user.handle }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td class="user-email">{{ user.email }}</td>
+                <td>
+                  <span class="privacy-badge" [class.public]="user.privacy === 'publico'" [class.private]="user.privacy === 'privado'">
+                    {{ user.privacy === 'publico' ? 'Público' : 'Privado' }}
+                  </span>
+                </td>
+                <td>
+                  <span class="status-badge" [class.active]="user.is_active === 1" [class.inactive]="user.is_active === 0">
+                    {{ user.is_active === 1 ? 'Activo' : 'Inactivo' }}
+                  </span>
+                </td>
+                <td>
+                  <span class="role-badge" [class.admin]="user.is_admin === 1" [class.user]="user.is_admin === 0">
+                    {{ user.is_admin === 1 ? 'Admin' : 'Utilizador' }}
+                  </span>
+                </td>
+                <td class="posts-count-cell">
+                  <button class="posts-count-btn" (click)="viewUserPosts(user.id)">
+                    📄 {{ getUserPostsCount(user.id) }}
+                  </button>
+                </td>
+                <td class="actions-cell">
+                  <div class="action-buttons">
+                    <button class="action-icon" (click)="toggleUserActive(user.id)" title="Ativar/Desativar">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M20 12H4M12 4v16"></path>
+                      </svg>
+                    </button>
+                    <button class="action-icon" (click)="toggleUserRole(user.id)" title="Tornar Admin" [disabled]="user.email === 'admin@nzolanet.ao'">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                      </svg>
+                    </button>
+                    <button class="action-icon danger" (click)="deleteUser(user.id)" title="Eliminar" [disabled]="user.email === 'admin@nzolanet.ao'">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <path d="M4 7h16M10 11v6M14 11v6M5 7l1 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-13M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"></path>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+           </table>
+          <div class="empty-state" *ngIf="filteredUsers.length === 0">
+            <p>Nenhum utilizador encontrado.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB DENÚNCIAS -->
+      <div class="admin-content" *ngIf="activeTab === 'reports'">
+        <div class="content-header">
+          <h2>Denúncias</h2>
+          <div class="reports-header-info">
+            <span class="pending-count" *ngIf="pendingReportsCount > 0">
+              🚨 {{ pendingReportsCount }} denúncia(s) pendente(s)
+            </span>
+          </div>
+          <div class="search-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="11" cy="11" r="8"/>
+              <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            <input type="text" [(ngModel)]="searchReportTerm" placeholder="Pesquisar denúncia..." class="search-input">
+          </div>
+        </div>
+        
+        <div class="content-card">
+          <table class="admin-table">
+            <thead>
+              <tr>
+                <th>Reportado por</th>
+                <th>Tipo</th>
+                <th>Conteúdo</th>
+                <th>Motivo</th>
+                <th>Estado</th>
+                <th class="actions-header">Ações</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let report of filteredReports" [class.pending-row]="report.status === 'pendente'">
+                <td class="user-cell">
+                  <div class="user-info">
+                    <img [src]="getUserAvatar(report.reporter_id)" class="user-avatar">
+                    <div>
+                      <div class="user-name">{{ getUserName(report.reporter_id) }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span class="type-badge" [class.post]="report.referencia_tipo === 'post'" [class.comment]="report.referencia_tipo === 'comment'">
+                    {{ report.referencia_tipo === 'post' ? 'Post' : 'Comentário' }}
+                  </span>
+                </td>
+                <td class="report-content-cell">{{ report.alvo_conteudo | slice:0:50 }}{{ (report.alvo_conteudo?.length || 0) > 50 ? '...' : '' }}</td>
+                <td class="report-reason">{{ report.motivo }}</td>
+                <td>
+                  <span class="status-badge" [class.pending]="report.status === 'pendente'" [class.resolved]="report.status === 'resolvido'" [class.ignored]="report.status === 'ignorado'">
+                    {{ report.status === 'pendente' ? 'Pendente' : (report.status === 'resolvido' ? 'Resolvido' : 'Ignorado') }}
+                  </span>
+                </td>
+                <td class="actions-cell">
+                  <div class="action-buttons">
+                    <button class="action-icon view" (click)="viewReportDetails(report)" title="Ver detalhes">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                        <circle cx="12" cy="12" r="3"></circle>
+                        <path d="M22 12c0 5.52-4.48 10-10 10S2 17.52 2 12 6.48 2 12 2s10 4.48 10 10z"></path>
+                      </svg>
+                    </button>
+                    <button class="action-icon success" (click)="resolveReport(report)" title="Resolver" *ngIf="report.status === 'pendente'">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="20 6 9 17 4 12"></polyline>
+                      </svg>
+                    </button>
+                    <button class="action-icon" (click)="ignoreReport(report)" title="Ignorar" *ngIf="report.status === 'pendente'">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                      </svg>
+                    </button>
+                  </div>
+                </td>
+               </tr>
+            </tbody>
+           </table>
+          <div class="empty-state" *ngIf="filteredReports.length === 0">
+            <p>Nenhuma denúncia encontrada.</p>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- MODAL DE DETALHES DA DENÚNCIA -->
+  <div class="modal-overlay" *ngIf="showReportModal" (click)="closeReportModalOnBackdrop($event)">
+    <div class="modal-container modal-large" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Detalhes da Denúncia</h3>
+        <button class="modal-close" (click)="closeReportModal()">✕</button>
+      </div>
+      <div class="modal-body" *ngIf="selectedReport">
+        <div class="report-detail-section">
+          <div class="detail-header">
+            <span class="detail-icon">🚨</span>
+            <span class="detail-title">Informação da Denúncia</span>
+          </div>
+          <div class="detail-grid">
+            <div class="detail-item">
+              <label>Reportado por:</label>
+              <span>{{ getUserName(selectedReport.reporter_id) }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Tipo:</label>
+              <span class="type-badge" [class.post]="selectedReport.referencia_tipo === 'post'" [class.comment]="selectedReport.referencia_tipo === 'comment'">
+                {{ selectedReport.referencia_tipo === 'post' ? 'Post' : 'Comentário' }}
+              </span>
+            </div>
+            <div class="detail-item">
+              <label>Autor do conteúdo:</label>
+              <span>{{ selectedReport.alvo_autor || 'Desconhecido' }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Data:</label>
+              <span>{{ formatDate(selectedReport.criado_em) }}</span>
+            </div>
+            <div class="detail-item">
+              <label>Motivo:</label>
+              <span class="motivo-text">{{ selectedReport.motivo }}</span>
+            </div>
+            <div class="detail-item full-width">
+              <label>Descrição:</label>
+              <div class="descricao-box">{{ selectedReport.descricao || 'Sem descrição adicional' }}</div>
+            </div>
+            <div class="detail-item full-width">
+              <label>Conteúdo denunciado:</label>
+              <div class="conteudo-box">"{{ selectedReport.alvo_conteudo || 'Conteúdo não disponível' }}"</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn cancel" (click)="closeReportModal()">Fechar</button>
+        <button class="modal-btn confirm" (click)="resolveReportFromModal()" *ngIf="selectedReport?.status === 'pendente'">
+          Eliminar conteúdo
+        </button>
+        <button class="modal-btn ignore" (click)="ignoreReportFromModal()" *ngIf="selectedReport?.status === 'pendente'">
+          Ignorar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE POSTS DO UTILIZADOR -->
+  <!-- MODAL DE POSTS DO UTILIZADOR -->
+<div class="modal-overlay" *ngIf="showUserPostsModal" (click)="closeUserPostsModalOnBackdrop($event)">
+  <div class="modal-container modal-large" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-user-info">
+        <img [src]="selectedUserAvatar" class="modal-user-avatar">
+        <h3>Posts de {{ selectedUserName }}</h3>
+      </div>
+      <button class="modal-close" (click)="closeUserPostsModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="user-posts-list" *ngIf="selectedUserPosts.length > 0">
+        <div class="user-post-item" *ngFor="let post of selectedUserPosts">
+          <div class="user-post-content">{{ post.text }}</div>
+          
+          <!-- Imagem do post -->
+          <div class="user-post-image" *ngIf="post.image">
+            <img [src]="post.image" alt="Post image">
+          </div>
+          
+          <!-- Vídeo do post -->
+          <div class="user-post-video" *ngIf="post.video">
+            <video [src]="post.video" controls></video>
+          </div>
+          
+          <div class="user-post-stats">
+            <span>❤️ {{ post.bazes }}</span>
+            <span>💬 {{ post.commentsCount }}</span>
+            <span class="post-time">{{ post.time }}</span>
+          </div>
+          <div class="user-post-actions">
+            <button class="action-icon danger" (click)="deletePost(post.id); closeUserPostsModal()" title="Eliminar post">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                <path d="M4 7h16M10 11v6M14 11v6M5 7l1 13a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2l1-13M9 7V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v3"></path>
+              </svg>
+              Eliminar
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="empty-state" *ngIf="selectedUserPosts.length === 0">
+        <p>Este utilizador não tem posts publicados.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <!-- MODAL DE CONFIRMAÇÃO -->
+  <div class="modal-overlay" *ngIf="showConfirmModal" (click)="closeConfirm()">
+    <div class="modal-container" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h3>Confirmar ação</h3>
+        <button class="modal-close" (click)="closeConfirm()">✕</button>
+      </div>
+      <div class="modal-body">
+        <p>{{ confirmMessage }}</p>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn cancel" (click)="closeConfirm()">Cancelar</button>
+        <button class="modal-btn confirm" (click)="executeConfirm()">Confirmar</button>
+      </div>
+    </div>
+  </div>
+</div>

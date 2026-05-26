@@ -1,0 +1,87 @@
+<div class="notifications-container">
+  <!-- CABEÇALHO -->
+  <div class="header-card">
+    <div class="header-title">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+      </svg>
+      <h1>Notificações</h1>
+    </div>
+  </div>
+
+  <!-- PEDIDOS DE AMIZADE -->
+  <div class="section-card">
+    <h2 class="section-title">Novos Seguidores</h2>
+    
+    <div *ngIf="incomingRequests.length === 0" class="empty-state">
+      <p>Sem pedidos pendentes.</p>
+    </div>
+    
+    <ul class="requests-list" *ngIf="incomingRequests.length > 0">
+      <li *ngFor="let request of incomingRequests" class="request-item">
+        <div class="request-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="8.5" cy="7" r="4" />
+            <path d="M20 8v6" />
+            <path d="M23 11h-6" />
+          </svg>
+        </div>
+        <img [src]="request.avatar" class="request-avatar">
+        <div class="request-info">
+          <span class="request-text">
+            <strong>{{ request.name }}</strong> enviou-te um pedido de amizade.
+          </span>
+        </div>
+        <div class="request-actions">
+          <button class="follow-back-btn" (click)="acceptRequest(request.id)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+            Seguir de volta
+          </button>
+
+           <button class="reject-btn" (click)="rejectRequest(request.id)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- ATIVIDADES RECENTES -->
+  <div class="section-card">
+    <h2 class="section-title">Atividade recente</h2>
+    
+    <ul class="activities-list">
+      <li *ngFor="let activity of recentActivities" class="activity-item">
+        <div class="activity-icon" [class.baze]="activity.type === 'baze'" [class.comment]="activity.type === 'comment'" [class.follow]="activity.type === 'follow'">
+          <svg *ngIf="activity.type === 'baze'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
+          </svg>
+          <svg *ngIf="activity.type === 'comment'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+          <svg *ngIf="activity.type === 'follow'" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+            <circle cx="8.5" cy="7" r="4" />
+            <path d="M20 8v6" />
+            <path d="M23 11h-6" />
+          </svg>
+        </div>
+        <div class="activity-info">
+          <span class="activity-text">
+            <strong>{{ activity.userName }}</strong> {{ activity.action }}
+            <span *ngIf="activity.comment" class="activity-comment">"{{ activity.comment }}"</span>
+            <a routerLink="/feed" class="activity-link" *ngIf="activity.postId">Ver</a>
+          </span>
+          <span class="activity-time">{{ activity.time }}</span>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>

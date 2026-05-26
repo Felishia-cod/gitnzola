@@ -1,0 +1,110 @@
+<div class="guardados-container">
+  <div class="header-card">
+    <div class="header-title">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M4 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16l-8-4-8 4V4z"/>
+      </svg>
+      <h1>Guardados</h1>
+    </div>
+    <p class="header-subtitle">Posts que guardaste para ver mais tarde.</p>
+  </div>
+
+  <div *ngIf="savedPosts.length === 0" class="empty-state">
+    <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M4 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v16l-8-4-8 4V4z"/>
+    </svg>
+    <h3>Nenhum post guardado</h3>
+    <p>Os posts que guardares aparecerão aqui.</p>
+    <a routerLink="/feed" class="go-to-feed-btn">Ir para o Feed</a>
+  </div>
+
+  <div class="saved-posts-list" *ngIf="savedPosts.length > 0">
+    <div class="saved-post-card" *ngFor="let post of savedPosts" (click)="openPostModal(post)">
+      <div class="post-header">
+        <img [src]="post.userAvatar" class="post-avatar">
+        <div class="post-info">
+          <span class="post-name">{{ post.userName }}</span>
+          <span class="post-time">{{ post.time }}</span>
+        </div>
+        <button class="remove-saved-btn" (click)="$event.stopPropagation(); removeSaved(post.id)" title="Remover dos guardados">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      <p class="post-text">{{ post.text }}</p>
+      
+      <img *ngIf="post.image" [src]="post.image" class="post-image">
+      <video *ngIf="post.video" [src]="post.video" class="post-video" controls></video>
+      
+      <div class="post-stats">
+        <span>❤️ {{ post.bazes }}</span>
+        <span>💬 {{ post.commentsCount }}</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DO POST -->
+  <div class="post-modal-overlay" *ngIf="showPostModal" (click)="closePostModalOnBackdrop($event)">
+    <div class="post-modal-content">
+      <div class="post-modal-header">
+        <h2>Post</h2>
+        <button class="post-modal-close" (click)="closePostModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="post-modal-body" *ngIf="selectedPost">
+        <div class="modal-post-header">
+          <img [src]="selectedPost.userAvatar" class="modal-post-avatar">
+          <div class="modal-post-info">
+            <span class="modal-post-name">{{ selectedPost.userName }}</span>
+            <span class="modal-post-time">{{ selectedPost.time }}</span>
+          </div>
+        </div>
+        <p class="modal-post-text">{{ selectedPost.text }}</p>
+        
+        <img *ngIf="selectedPost.image" [src]="selectedPost.image" class="modal-post-image">
+        <video *ngIf="selectedPost.video" [src]="selectedPost.video" class="modal-post-video" controls></video>
+        
+        <div class="modal-post-stats">
+          <span>❤️ {{ selectedPost.bazes }} baze</span>
+          <span>💬 {{ selectedPost.commentsCount }} comentários</span>
+        </div>
+        
+        <div class="modal-actions">
+          <a routerLink="/feed" class="go-to-post-btn" (click)="closePostModal()">Ver no Feed</a>
+          <button class="remove-post-btn" (click)="removeSaved(selectedPost.id); closePostModal()">
+            Remover dos guardados
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE ALERTA -->
+<div class="modal-overlay" *ngIf="showAlertModal" (click)="closeAlertModal()">
+  <div class="modal-content modal-{{ alertType }}" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-icon">
+        <svg *ngIf="alertType === 'success'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+      </div>
+      <h3>{{ alertTitle }}</h3>
+      <button class="modal-close" (click)="closeAlertModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>{{ alertMessage }}</p>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-primary" (click)="closeAlertModal()">Entendi</button>
+    </div>
+  </div>
+</div>

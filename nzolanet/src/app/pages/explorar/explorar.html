@@ -1,0 +1,142 @@
+<div class="explorar-container">
+  <!-- CABEÇALHO -->
+  <div class="header-card">
+    <div class="header-title">
+      <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+      </svg>
+      <h1>Explorar</h1>
+    </div>
+    <p class="header-subtitle">Os posts mais populares em Angola agora.</p>
+  </div>
+
+  <!-- GRID DE POSTS POPULARES -->
+  <div class="posts-grid">
+    <div class="grid-item" *ngFor="let post of trendingPosts" (click)="openPostModal(post)">
+      <!-- Mostrar imagem se existir -->
+      <img *ngIf="post.image" [src]="post.image" class="grid-image" [alt]="post.text">
+      <!-- Mostrar vídeo se existir (thumbnail) -->
+      <video *ngIf="post.video" class="grid-video" muted>
+        <source [src]="post.video" type="video/mp4">
+      </video>
+      <!-- Fallback se não tiver imagem nem vídeo -->
+      <div *ngIf="!post.image && !post.video" class="grid-placeholder">
+        <span>📝</span>
+      </div>
+      <div class="grid-overlay">
+        <div class="overlay-stats">
+          <span class="stat">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+            {{ post.bazes }}
+          </span>
+          <span class="stat">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            {{ post.commentsCount }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DO POST -->
+  <div class="post-modal-overlay" *ngIf="showPostModal" (click)="closePostModalOnBackdrop($event)">
+    <div class="post-modal-content">
+      <div class="post-modal-header">
+        <h2>Post</h2>
+        <button class="post-modal-close" (click)="closePostModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="post-modal-body" *ngIf="selectedPost">
+        <div class="modal-post-header">
+          <img [src]="selectedPost.userAvatar" class="modal-post-avatar">
+          <div class="modal-post-info">
+            <span class="modal-post-name">{{ selectedPost.userName }}</span>
+            <span class="modal-post-time">{{ selectedPost.time }}</span>
+          </div>
+        </div>
+        <p class="modal-post-text">{{ selectedPost.text }}</p>
+        
+        <!-- Mostrar imagem se existir -->
+        <img *ngIf="selectedPost.image" [src]="selectedPost.image" class="modal-post-image">
+        
+        <!-- Mostrar vídeo se existir -->
+        <video *ngIf="selectedPost.video" [src]="selectedPost.video" class="modal-post-video" controls></video>
+        
+        <div class="modal-post-actions">
+          <button class="modal-action-btn" (click)="toggleBaze(selectedPost)" [class.liked]="selectedPost.liked">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
+            </svg>
+            {{ selectedPost.bazes }} <span>baze</span>
+          </button>
+          <div class="modal-action-stat">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+            {{ selectedPost.commentsCount }} comentários
+          </div>
+        </div>
+        
+        <!-- COMENTÁRIOS -->
+        <div class="modal-comments-section">
+          <h4>Comentários</h4>
+          <div class="modal-comments-list">
+            <div class="modal-comment-item" *ngFor="let comment of selectedPost.comments">
+              <img [src]="comment.userAvatar" class="modal-comment-avatar">
+              <div class="modal-comment-content">
+                <div class="modal-comment-header">
+                  <span class="modal-comment-name">{{ comment.userName }}</span>
+                  <span class="modal-comment-time">{{ comment.time }}</span>
+                </div>
+                <p class="modal-comment-text">{{ comment.text }}</p>
+                <div class="modal-comment-actions">
+                  <button class="modal-comment-like" (click)="likePostComment(comment.id)">
+                    ❤️ {{ comment.likes }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="modal-comment-input">
+            <img [src]="currentUser.avatar" class="modal-comment-input-avatar">
+            <input type="text" [(ngModel)]="newCommentText" placeholder="Escrever um comentário..." (keyup.enter)="addCommentToPost()">
+            <button class="modal-comment-submit" (click)="addCommentToPost()">Comentar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE ALERTA -->
+<div class="modal-overlay" *ngIf="showAlertModal" (click)="closeAlertModal()">
+  <div class="modal-content modal-{{ alertType }}" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-icon">
+        <svg *ngIf="alertType === 'warning'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 9v4"></path>
+          <path d="M12 17h.01"></path>
+          <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"></path>
+        </svg>
+      </div>
+      <h3>{{ alertTitle }}</h3>
+      <button class="modal-close" (click)="closeAlertModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>{{ alertMessage }}</p>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-primary" (click)="closeAlertModal()">Entendi</button>
+    </div>
+  </div>
+</div>
