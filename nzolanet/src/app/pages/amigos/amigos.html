@@ -1,0 +1,265 @@
+<div class="amigos-container">
+  <!-- CABEÇALHO -->
+  <div class="header-card">
+    <div class="header-title">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+        <circle cx="9" cy="7" r="4"></circle>
+        <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+        <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+      </svg>
+      <h1>Pessoas que talvez conheças</h1>
+    </div>
+    <p class="header-subtitle">
+      O teu perfil é 
+      <strong [class.public-badge]="myPrivacy === 'public'" [class.private-badge]="myPrivacy === 'private'">
+        {{ myPrivacy === 'public' ? 'PÚBLICO' : 'PRIVADO' }}
+      </strong>
+      - 
+      <span *ngIf="myPrivacy === 'public'">Qualquer pessoa pode seguir-te diretamente.</span>
+      <span *ngIf="myPrivacy === 'private'">Tens de aprovar pedidos de amizade.</span>
+    </p>
+  </div>
+
+  <!-- BARRA DE PESQUISA -->
+  <div class="search-card">
+    <div class="search-container">
+      <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <input 
+        type="text" 
+        class="search-input" 
+        placeholder="Pesquisar pessoas por nome ou handle..." 
+        [(ngModel)]="searchTerm"
+        (input)="searchUsers()"
+      >
+      <button class="search-clear" *ngIf="searchTerm" (click)="clearSearch()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+    <div class="search-results-count" *ngIf="searchTerm">
+      {{ filteredUsers.length }} resultado(s) encontrado(s)
+    </div>
+  </div>
+
+  <!-- RESULTADOS DA PESQUISA (quando pesquisando) -->
+  <div class="section-card" *ngIf="searchTerm && filteredUsers.length > 0">
+    <h2 class="section-title">Resultados da pesquisa</h2>
+    <ul class="users-list">
+      <li *ngFor="let user of filteredUsers" class="user-item">
+        <div class="user-avatar">
+          <img [src]="user.avatar" [alt]="user.name">
+        </div>
+        <div class="user-info">
+          <div class="user-name">{{ user.name }}</div>
+          <div class="user-detail">
+            {{ user.handle }} · {{ user.bio }}
+            <span class="privacy-badge" [class.private]="user.privacy === 'private'">
+              {{ user.privacy === 'private' ? '🔒 Privado' : '🌍 Público' }}
+            </span>
+          </div>
+        </div>
+        <div class="user-actions">
+          <!-- Verificar se já é amigo -->
+          <ng-container *ngIf="isFriend(user.id)">
+            <span class="friend-badge">✓ Amigo</span>
+            <button class="unfriend-btn-small" (click)="unfriend(user.id)" title="Remover amigo">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="8.5" cy="7" r="4"></circle>
+                <line x1="17" y1="11" x2="23" y2="11"></line>
+                <line x1="20" y1="8" x2="20" y2="14"></line>
+              </svg>
+            </button>
+          </ng-container>
+          
+          <!-- Verificar se pedido foi enviado -->
+          <ng-container *ngIf="!isFriend(user.id) && showPendingStatus(user.id)">
+            <span class="pending-badge-small">⏳ Pendente</span>
+            <button class="cancel-btn-small" (click)="cancelRequest(user.id)" title="Cancelar pedido">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </ng-container>
+          
+          <!-- Verificar se recebeu pedido -->
+          <ng-container *ngIf="!isFriend(user.id) && !showPendingStatus(user.id) && hasIncomingRequest(user.id)">
+            <button class="accept-btn-small" (click)="acceptRequest(user.id)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Aceitar
+            </button>
+            <button class="reject-btn-small" (click)="rejectRequest(user.id)">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+            </button>
+          </ng-container>
+          
+          <!-- Botão normal para adicionar -->
+          <ng-container *ngIf="!isFriend(user.id) && !showPendingStatus(user.id) && !hasIncomingRequest(user.id)">
+            <button class="add-friend-btn" (click)="sendRequest(user.id)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14m-7-7h14"></path>
+              </svg>
+              {{ getButtonText(user.id) }}
+            </button>
+          </ng-container>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- MENSAGEM QUANDO PESQUISA NÃO ENCONTRA RESULTADOS -->
+  <div class="section-card" *ngIf="searchTerm && filteredUsers.length === 0">
+    <div class="empty-state">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <circle cx="11" cy="11" r="8"></circle>
+        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+      </svg>
+      <p>Nenhum usuário encontrado para "{{ searchTerm }}"</p>
+      <p class="empty-subtitle">Tente outro nome ou handle</p>
+    </div>
+  </div>
+
+  <!-- TEUS AMIGOS/SEGUIDORES -->
+  <div class="section-card" *ngIf="!searchTerm">
+    <h2 class="section-title">Os teus seguidores ({{ friends.length }})</h2>
+    <div *ngIf="friends.length === 0" class="empty-state">
+      <p>Ainda não tens seguidores. Adiciona alguém abaixo!</p>
+    </div>
+    <ul class="users-list" *ngIf="friends.length > 0">
+      <li *ngFor="let userId of friends" class="user-item">
+        <div class="user-avatar">
+          <img [src]="getUser(userId)?.avatar" [alt]="getUser(userId)?.name">
+        </div>
+        <div class="user-info">
+          <div class="user-name">{{ getUser(userId)?.name }}</div>
+          <div class="user-detail">
+            {{ getUser(userId)?.handle }} · {{ getUser(userId)?.bio }}
+            <span class="privacy-badge" [class.private]="getUser(userId)?.privacy === 'private'">
+              {{ getUser(userId)?.privacy === 'private' ? '🔒 Privado' : '🌍 Público' }}
+            </span>
+          </div>
+        </div>
+        <div class="user-actions">
+          <button class="unfriend-btn" (click)="unfriend(userId)" title="Remover amigo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+              <circle cx="8.5" cy="7" r="4"></circle>
+              <line x1="17" y1="11" x2="23" y2="11"></line>
+              <line x1="20" y1="8" x2="20" y2="14"></line>
+            </svg>
+            Remover
+          </button>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- PEDIDOS RECEBIDOS (PENDENTES) - SÓ APARECE SE O PERFIL FOR PRIVADO -->
+  <div class="section-card" *ngIf="!searchTerm && myPrivacy === 'private' && incomingRequests.length > 0">
+    <h2 class="section-title">Pedidos pendentes ({{ incomingRequests.length }})</h2>
+    <ul class="users-list">
+      <li *ngFor="let userId of incomingRequests" class="user-item">
+        <div class="user-avatar">
+          <img [src]="getUser(userId)?.avatar" [alt]="getUser(userId)?.name">
+        </div>
+        <div class="user-info">
+          <div class="user-name">{{ getUser(userId)?.name }}</div>
+          <div class="user-detail">
+            {{ getUser(userId)?.handle }} · {{ getUser(userId)?.bio }}
+            <span class="privacy-badge" [class.private]="getUser(userId)?.privacy === 'private'">
+              {{ getUser(userId)?.privacy === 'private' ? '🔒 Privado' : '🌍 Público' }}
+            </span>
+          </div>
+        </div>
+        <div class="user-actions">
+          <button class="accept-btn" (click)="acceptRequest(userId)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+            Aceitar
+          </button>
+          <button class="reject-btn" (click)="rejectRequest(userId)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+            Recusar
+          </button>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- PEDIDOS ENVIADOS (AGUARDANDO) - SÓ APARECE SE O PERFIL FOR PRIVADO -->
+  <div class="section-card" *ngIf="!searchTerm && myPrivacy === 'private' && outgoingRequests.length > 0">
+    <h2 class="section-title">Pedidos enviados ({{ outgoingRequests.length }})</h2>
+    <ul class="users-list">
+      <li *ngFor="let userId of outgoingRequests" class="user-item">
+        <div class="user-avatar">
+          <img [src]="getUser(userId)?.avatar" [alt]="getUser(userId)?.name">
+        </div>
+        <div class="user-info">
+          <div class="user-name">{{ getUser(userId)?.name }}</div>
+          <div class="user-detail">
+            {{ getUser(userId)?.handle }} · {{ getUser(userId)?.bio }}
+            <span class="privacy-badge" [class.private]="getUser(userId)?.privacy === 'private'">
+              {{ getUser(userId)?.privacy === 'private' ? '🔒 Privado' : '🌍 Público' }}
+            </span>
+          </div>
+        </div>
+        <div class="user-actions">
+          <span class="pending-badge">⏳ Aguardando aprovação...</span>
+          <button class="cancel-btn" (click)="cancelRequest(userId)">
+            Cancelar
+          </button>
+        </div>
+      </li>
+    </ul>
+  </div>
+
+  <!-- PESSOAS QUE PODE CONHECER (SUGESTÕES) -->
+  <div class="section-card" *ngIf="!searchTerm">
+    <h2 class="section-title">Pessoas que podes conhecer</h2>
+    <ul class="users-list">
+      <li *ngFor="let user of suggestedUsers" class="user-item">
+        <div class="user-avatar">
+          <img [src]="user.avatar" [alt]="user.name">
+        </div>
+        <div class="user-info">
+          <div class="user-name">{{ user.name }}</div>
+          <div class="user-detail">
+            {{ user.handle }} · {{ user.bio }}
+            <span class="privacy-badge" [class.private]="user.privacy === 'private'">
+              {{ user.privacy === 'private' ? '🔒 Privado' : '🌍 Público' }}
+            </span>
+          </div>
+        </div>
+        <div class="user-actions">
+          <ng-container *ngIf="!showPendingStatus(user.id)">
+            <button class="add-friend-btn" (click)="sendRequest(user.id)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 5v14m-7-7h14"></path>
+              </svg>
+              {{ getButtonText(user.id) }}
+            </button>
+          </ng-container>
+          <span *ngIf="showPendingStatus(user.id)" class="pending-badge">
+            ⏳ Pedido enviado
+          </span>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>

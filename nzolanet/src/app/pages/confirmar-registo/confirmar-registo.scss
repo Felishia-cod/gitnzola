@@ -1,0 +1,130 @@
+// Container principal - fundo igual ao feed
+.confirm-container {
+  min-height: 100vh;
+  background: var(--background);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+// Card de confirmação
+.confirm-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 2rem;
+  padding: 2.5rem;
+  max-width: 420px;
+  width: 100%;
+  text-align: center;
+  animation: fadeInUp 0.5s ease;
+  box-shadow: 0 20px 35px -10px rgba(0, 0, 0, 0.1);
+}
+
+// Animação de entrada
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// Ícone de sucesso
+.confirm-icon {
+  width: 5rem;
+  height: 5rem;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem auto;
+}
+
+.confirm-icon svg {
+  color: #10b981;
+  stroke-width: 1.8;
+}
+
+// Título
+.confirm-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--foreground);
+  margin-bottom: 0.75rem;
+  letter-spacing: -0.02em;
+}
+
+// Mensagem
+.confirm-message {
+  font-size: 0.9375rem;
+  color: var(--muted-foreground);
+  line-height: 1.5;
+  margin-bottom: 2rem;
+}
+
+// Botão de login
+.login-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.875rem 1.5rem;
+  background: linear-gradient(135deg, #FF7A00 0%, #FF9433 100%);
+  color: white;
+  border: none;
+  border-radius: 3rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 1rem;
+}
+
+.login-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(255, 122, 0, 0.3);
+}
+
+.login-btn:active {
+  transform: translateY(0);
+}
+
+// Texto de redirecionamento
+.redirect-text {
+  font-size: 0.75rem;
+  color: var(--muted-foreground);
+  margin: 0;
+}
+
+// Responsividade
+@media (max-width: 480px) {
+  .confirm-card {
+    padding: 1.75rem;
+    max-width: 90%;
+  }
+  
+  .confirm-title {
+    font-size: 1.5rem;
+  }
+  
+  .confirm-icon {
+    width: 4rem;
+    height: 4rem;
+    
+    svg {
+      width: 48px;
+      height: 48px;
+    }
+  }
+  
+  .confirm-message {
+    font-size: 0.875rem;
+    margin-bottom: 1.5rem;
+  }
+}
