@@ -27,7 +27,8 @@ export class LoginComponent {
   currentUser: any = null;
 
   private redirectAfterLogin(user: any): void {
-    const isAdmin = user?.isAdmin === true || user?.is_admin === true;
+    const isAdmin = user?.isAdmin === true || user?.is_admin === true || user?.is_admin === 1;
+
 
     if (isAdmin) {
       this.router.navigate(['/admin']);

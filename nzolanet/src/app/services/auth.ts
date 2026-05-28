@@ -49,9 +49,13 @@ export class Auth {
               coverImage: user.coverImage || user.cover_image || ''
             };
             
+            userData.isAdmin = user.is_admin === true || user.isAdmin === true || user.is_admin === 1;
+            userData.is_admin = user.is_admin === true || user.isAdmin === true || user.is_admin === 1;
+
             localStorage.setItem('user', JSON.stringify(userData));
             console.log('✅ User salvo no localStorage:', userData.name);
             console.log('✅ User ID:', userData.id);
+            console.log('✅ User admin flag:', userData.is_admin);
           } else {
             console.error('❌ User não encontrado na resposta');
           }
