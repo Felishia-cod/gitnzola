@@ -33,7 +33,7 @@ export class Auth {
           
           if (user) {
             // CORREÇÃO: Garantir que todos os campos necessários existam
-            const userData = {
+            const userData: any = {
               id: user.id?.toString() || user.user_id?.toString() || Date.now().toString(),
               name: user.name || user.username || email.split('@')[0],
               email: user.email || email,
@@ -46,11 +46,10 @@ export class Auth {
               amigosCount: user.amigosCount || user.following_count || 0,
               followersCount: user.followersCount || user.followers_count || 0,
               privacy: user.privacy || user.profile_privacy || 'public',
-              coverImage: user.coverImage || user.cover_image || ''
+              coverImage: user.coverImage || user.cover_image || '',
+              isAdmin: user.is_admin === true || user.isAdmin === true || user.is_admin === 1,
+              is_admin: user.is_admin === true || user.isAdmin === true || user.is_admin === 1
             };
-            
-            userData.isAdmin = user.is_admin === true || user.isAdmin === true || user.is_admin === 1;
-            userData.is_admin = user.is_admin === true || user.isAdmin === true || user.is_admin === 1;
 
             localStorage.setItem('user', JSON.stringify(userData));
             console.log('✅ User salvo no localStorage:', userData.name);
