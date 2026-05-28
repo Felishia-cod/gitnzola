@@ -182,21 +182,21 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.activeTab = tab;
   }
 
-  toggleUserActive(userId: number) {
+  toggleUserActive(userId: string) {
     const user = this.users.find(u => u.id === userId);
     if (user) {
       user.is_active = user.is_active === 1 ? 0 : 1;
     }
   }
 
-  toggleUserRole(userId: number) {
+  toggleUserRole(userId: string) {
     const user = this.users.find(u => u.id === userId);
     if (user && user.email !== 'admin@nzolanet.ao') {
       user.is_admin = user.is_admin === 1 ? 0 : 1;
     }
   }
 
-  deleteUser(userId: number) {
+  deleteUser(userId: string) {
     this.showConfirm('Tens a certeza que queres eliminar este utilizador?', () => {
       this.users = this.users.filter(u => u.id !== userId);
       this.closeConfirm();
@@ -210,7 +210,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     });
   }
 
-  getUserPostsCount(userId: number): number {
+  getUserPostsCount(userId: string): number {
     const user = this.users.find(u => u.id === userId);
     if (user) {
       const count = this.allPosts.filter(p => p.userName === user.name).length;
@@ -219,7 +219,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     return 0;
   }
 
-  viewUserPosts(userId: number) {
+  viewUserPosts(userId: string) {
     const user = this.users.find(u => u.id === userId);
     if (user) {
       this.selectedUserName = user.name;
@@ -305,12 +305,12 @@ export class AdminComponent implements OnInit, OnDestroy {
     }
   }
 
-  getUserName(userId: number): string {
+  getUserName(userId: string): string {
     const user = this.users.find(u => u.id === userId);
     return user ? user.name : userId.toString();
   }
 
-  getUserAvatar(userId: number): string {
+  getUserAvatar(userId: string): string {
     const user = this.users.find(u => u.id === userId);
     return user ? user.avatar : '';
   }
