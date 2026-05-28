@@ -1,0 +1,137 @@
+<div class="login-container">
+  <div class="login-card">
+    <!-- Logo -->
+    <div class="logo">
+      <div class="logo-circle">
+        <span class="star">✦</span>
+      </div>
+      <h1>NzolaNet</h1>
+    </div>
+
+    <h2>Cria a tua conta</h2>
+    <p class="subtitle">Junta-te à comunidade NzolaNet</p>
+
+    <form (ngSubmit)="submit()">
+      <!-- Nome e Username -->
+      <div class="form-row">
+        <div class="form-field half">
+          <label for="name">Nome completo</label>
+          <input
+            type="text"
+            id="name"
+            [(ngModel)]="name"
+            name="name"
+            placeholder="Teu nome"
+            required />
+        </div>
+
+        <div class="form-field half">
+          <label for="handle">Username</label>
+          <input
+            type="text"
+            id="handle"
+            [(ngModel)]="handle"
+            name="handle"
+            placeholder="@teu_user"
+            required />
+        </div>
+      </div>
+
+      <!-- Email -->
+      <div class="form-field">
+        <label for="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          [(ngModel)]="email"
+          name="email"
+          placeholder="demo@nzolanet.ao"
+          required
+          autocomplete="email" />
+      </div>
+
+      <!-- Data de nascimento e Género (lado a lado) -->
+      <div class="form-row">
+        <div class="form-field half">
+          <label for="dataNascimento">Data de nascimento</label>
+          <input
+            type="date"
+            id="dataNascimento"
+            [(ngModel)]="dataNascimento"
+            name="dataNascimento"
+            class="date-input"
+            required />
+        </div>
+
+        <div class="form-field half">
+          <label for="genero">Género</label>
+          <select
+            id="genero"
+            [(ngModel)]="genero"
+            name="genero"
+            class="select-input"
+            required>
+            <option value="" disabled selected>Seleccionar</option>
+            <option value="masculino">👨 Masculino</option>
+            <option value="feminino">👩 Feminino</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Palavra-passe e Confirmar -->
+      <div class="form-row">
+        <div class="form-field half">
+          <label for="password">Palavra-passe</label>
+          <input
+            type="password"
+            id="password"
+            [(ngModel)]="password"
+            name="password"
+            placeholder="••••••••"
+            required />
+        </div>
+
+        <div class="form-field half">
+          <label for="confirm">Confirmar</label>
+          <input
+            type="password"
+            id="confirm"
+            [(ngModel)]="confirm"
+            name="confirm"
+            placeholder="••••••••"
+            required />
+        </div>
+      </div>
+
+      <!-- Termos e Condições -->
+      <label class="checkbox-label">
+        <input
+          type="checkbox"
+          [(ngModel)]="accept"
+          name="accept"
+          class="checkbox" />
+        <span class="checkbox-text">
+          Aceito os <a routerLink="/termos" class="link-primary">Termos</a> e a
+          <a routerLink="/privacidade" class="link-primary">Política de Privacidade</a>.
+        </span>
+      </label>
+
+      <!-- Mensagem de erro -->
+      <div *ngIf="err" class="error-message">
+        {{ err }}
+      </div>
+
+      <!-- Botão Criar conta -->
+      <button type="submit" class="btn-login" [disabled]="isLoading">
+        <span *ngIf="isLoading" class="spinner"></span>
+        <span *ngIf="!isLoading">Criar conta</span>
+        <span *ngIf="isLoading">A processar...</span>
+      </button>
+
+      <!-- Link para login -->
+      <p class="register-link">
+        Já tens conta? <a routerLink="/login" class="link-primary">Entra aqui</a>
+      </p>
+    </form>
+  </div>
+</div>

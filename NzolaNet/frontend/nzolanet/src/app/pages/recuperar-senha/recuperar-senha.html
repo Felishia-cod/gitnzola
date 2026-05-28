@@ -1,0 +1,90 @@
+<div class="login-container">
+  <div class="login-card">
+    <!-- Logo -->
+    <div class="logo">
+      <div class="logo-circle">
+        <span class="star">✦</span>
+      </div>
+      <h1>NzolaNet</h1>
+    </div>
+
+    <h2>Recuperar senha</h2>
+    <p class="subtitle" *ngIf="step === 1">Indica o teu email</p>
+    <p class="subtitle" *ngIf="step === 2">Insere a nova palavra-passe</p>
+
+    <!-- Step 1: Pedir email -->
+    <form *ngIf="step === 1" (ngSubmit)="askCode()">
+      <div class="form-field">
+        <label for="email">Email</label>
+        <input
+          type="email"
+          id="email"
+          [(ngModel)]="email"
+          name="email"
+          placeholder="demo@nzolanet.ao"
+          required
+          autocomplete="email" />
+      </div>
+
+      <div *ngIf="err" class="error-message">
+        {{ err }}
+      </div>
+
+      <div *ngIf="msg" class="success-message">
+        {{ msg }}
+      </div>
+
+      <button type="submit" class="btn-login" [disabled]="isLoading">
+        <span *ngIf="isLoading" class="spinner"></span>
+        <span *ngIf="!isLoading">Enviar código</span>
+        <span *ngIf="isLoading">Enviando...</span>
+      </button>
+    </form>
+
+    <!-- Step 2: Redefinir senha (sem código, só senha e confirmar) -->
+    <form *ngIf="step === 2" (ngSubmit)="reset()">
+      <div class="form-field">
+        <label for="password">Nova palavra-passe</label>
+        <input
+          type="password"
+          id="password"
+          [(ngModel)]="password"
+          name="password"
+          placeholder="••••••••"
+          required
+          autocomplete="new-password" />
+      </div>
+
+      <div class="form-field">
+        <label for="confirmPassword">Confirmar palavra-passe</label>
+        <input
+          type="password"
+          id="confirmPassword"
+          [(ngModel)]="confirmPassword"
+          name="confirmPassword"
+          placeholder="••••••••"
+          required
+          autocomplete="new-password" />
+      </div>
+
+      <div *ngIf="err" class="error-message">
+        {{ err }}
+      </div>
+
+      <div *ngIf="msg" class="success-message">
+        {{ msg }}
+      </div>
+
+      <button type="submit" class="btn-login" [disabled]="isLoading">
+        <span *ngIf="isLoading" class="spinner"></span>
+        <span *ngIf="!isLoading">Redefinir senha</span>
+        <span *ngIf="isLoading">Redefinindo...</span>
+      </button>
+    </form>
+
+    <!-- Link voltar ao login -->
+    <div class="register-link">
+      <a routerLink="/login">Voltar ao login</a>
+    </div>
+  </div>
+</div>

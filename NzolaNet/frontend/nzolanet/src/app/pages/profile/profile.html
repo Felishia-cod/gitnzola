@@ -1,0 +1,339 @@
+<div *ngIf="currentUser" class="perfil-container">
+  <!-- CARD DO PERFIL -->
+  <div class="profile-card">
+    <div class="cover-image" [style.backgroundImage]="coverImage ? 'url(' + coverImage + ')' : 'var(--gradient-hero)'" (click)="openCoverUpload()">
+      <div class="cover-overlay">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M17 3l4 4-7 7H10v-4l7-7z"/>
+          <path d="M4 20h16"/>
+        </svg>
+        <span>Alterar capa</span>
+      </div>
+    </div>
+    
+    <div class="profile-content">
+      <div class="avatar-wrapper" (click)="openAvatarUpload()">
+        <img [src]="currentUser.avatar" class="profile-avatar" alt="Avatar">
+        <div class="avatar-overlay">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 3l4 4-7 7H10v-4l7-7z"/>
+            <path d="M4 20h16"/>
+          </svg>
+        </div>
+      </div>
+      
+      <div class="profile-header">
+        <div class="profile-info">
+          <h1 class="profile-name">
+            {{ currentUser.name }}
+            <span class="privacy-badge" [class.public]="privacyStatus === 'public'" [class.private]="privacyStatus === 'private'">
+              {{ privacyIcon }} {{ privacyText }}
+            </span>
+          </h1>
+          <p class="profile-handle">{{ currentUser.handle }}</p>
+          <p class="profile-bio">{{ currentUser.bio }}</p>
+          
+          <div class="profile-meta">
+            <span class="meta-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+              {{ currentUser.location }}
+            </span>
+            <span class="meta-item">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+                <line x1="16" y1="2" x2="16" y2="6"/>
+                <line x1="8" y1="2" x2="8" y2="6"/>
+                <line x1="3" y1="10" x2="21" y2="10"/>
+              </svg>
+              Entrou em {{ currentUser.joinedDate }}
+            </span>
+          </div>
+        </div>
+        
+        <div class="profile-actions">
+          <button class="back-btn" *ngIf="!isOwnProfile" (click)="goBack()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+            Voltar
+          </button>
+          <button class="edit-btn" *ngIf="isOwnProfile" (click)="openEditModal()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17 3l4 4-7 7H10v-4l7-7z"/>
+              <path d="M4 20h16"/>
+            </svg>
+            Editar perfil
+          </button>
+          <button class="logout-btn" *ngIf="isOwnProfile" (click)="logout()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+            Sair
+          </button>
+        </div>
+      </div>
+      
+      <div class="profile-stats">
+        <div class="stat-item">
+          <span class="stat-number">{{ currentUser.postsCount }}</span>
+          <span class="stat-label">Posts</span>
+        </div>
+        <div class="stat-item clickable" (click)="openAmigos()">
+          <span class="stat-number">{{ currentUser.amigosCount || 1 }}</span>
+          <span class="stat-label">Seguir</span>
+        </div>
+        <div class="stat-item clickable" (click)="openFollowers()">
+          <span class="stat-number">{{ currentUser.followersCount }}</span>
+          <span class="stat-label">Seguidores</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRIVACIDADE -->
+  <div class="privacy-section">
+    <h3>Quem pode ver o teu perfil</h3>
+    <div class="privacy-options">
+      <div class="option" [class.active]="privacyStatus === 'public'" (click)="setPrivacy('public')">
+        <h4>🌍 Público</h4>
+        <p>Qualquer pessoa pode ver os teus posts e perfil</p>
+      </div>
+      <div class="option" [class.active]="privacyStatus === 'private'" (click)="setPrivacy('private')">
+        <h4>🔒 Privado</h4>
+        <p>Só os teus amigos podem ver os teus posts.</p>
+      </div>
+    </div>
+    <a routerLink="/feed/definicoes" class="more-options">Mais opções de privacidade em Definições</a>
+  </div>
+
+  <!-- POSTS DO USUÁRIO -->
+  <div class="user-posts">
+    <h3 class="posts-title">Meus Posts</h3>
+    <div *ngIf="userPosts.length === 0" class="posts-placeholder">
+      <p>Nenhum post publicado ainda.</p>
+    </div>
+    <div class="posts-list" *ngIf="userPosts.length > 0">
+      <div class="user-post-card" *ngFor="let post of userPosts" (click)="openPostModal(post)">
+        <div class="post-header">
+          <img [src]="post.userAvatar" class="post-avatar">
+          <div class="post-info">
+            <span class="post-name">{{ post.userName }}</span>
+            <span class="post-time">{{ post.time }}</span>
+          </div>
+        </div>
+        <p class="post-text">{{ post.text }}</p>
+        
+        <img *ngIf="post.image" [src]="post.image" class="post-image">
+        <video *ngIf="post.video" [src]="post.video" class="post-video" controls></video>
+        
+        <div class="post-stats">
+          <span>❤️ {{ post.bazes }}</span>
+          <span>💬 {{ post.commentsCount }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DO POST -->
+  <div class="post-modal-overlay" *ngIf="showPostModal" (click)="closePostModalOnBackdrop($event)">
+    <div class="post-modal-content">
+      <div class="post-modal-header">
+        <h2>Post</h2>
+        <button class="post-modal-close" (click)="closePostModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="post-modal-body" *ngIf="selectedPost">
+        <div class="modal-post-header">
+          <img [src]="selectedPost.userAvatar" class="modal-post-avatar">
+          <div class="modal-post-info">
+            <span class="modal-post-name">{{ selectedPost.userName }}</span>
+            <span class="modal-post-time">{{ selectedPost.time }}</span>
+          </div>
+        </div>
+        <p class="modal-post-text">{{ selectedPost.text }}</p>
+        
+        <img *ngIf="selectedPost.image" [src]="selectedPost.image" class="modal-post-image">
+        <video *ngIf="selectedPost.video" [src]="selectedPost.video" class="modal-post-video" controls></video>
+        
+        <div class="modal-post-stats">
+          <span>❤️ {{ selectedPost.bazes }} baze</span>
+          <span>💬 {{ selectedPost.commentsCount }} comentários</span>
+        </div>
+        
+        <div class="modal-comments-section">
+          <h4>Comentários</h4>
+          <div class="modal-comments-list">
+            <div class="modal-comment-item" *ngFor="let comment of selectedPost.comments">
+              <img [src]="comment.userAvatar" class="modal-comment-avatar">
+              <div class="modal-comment-content">
+                <div class="modal-comment-header">
+                  <span class="modal-comment-name">{{ comment.userName }}</span>
+                  <span class="modal-comment-time">{{ comment.time }}</span>
+                </div>
+                <p class="modal-comment-text">{{ comment.text }}</p>
+                <div class="modal-comment-actions">
+                  <button class="modal-comment-like" (click)="likePostComment(comment.id)">
+                    ❤️ {{ comment.likes }}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="modal-comment-input">
+            <img [src]="currentUser.avatar" class="modal-comment-input-avatar">
+            <input type="text" [(ngModel)]="newCommentText" placeholder="Escrever um comentário..." (keyup.enter)="addCommentToPost()">
+            <button class="modal-comment-submit" (click)="addCommentToPost()">Comentar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE AMIGOS/SEGUIDORES -->
+  <div class="modal-overlay" *ngIf="showModal" (click)="closeModalOnBackdrop($event)">
+    <div class="modal-content modal-large">
+      <div class="modal-header">
+        <h2>{{ modalTitle }}</h2>
+        <button class="modal-close" (click)="closeModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="modal-search">
+        <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"/>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input type="text" [(ngModel)]="searchQuery" placeholder="Procurar pessoas..." class="search-input">
+      </div>
+      
+      <div class="modal-list">
+        <div *ngIf="filteredUsers.length === 0" class="empty-list">
+          <p>Nenhum usuário encontrado.</p>
+        </div>
+        <div *ngFor="let user of filteredUsers" class="modal-user-item">
+          <img [src]="user.avatar" class="modal-user-avatar">
+          <div class="modal-user-info">
+            <span class="modal-user-name">{{ user.name }}</span>
+            <span class="modal-user-handle">{{ user.handle }}</span>
+            <span class="modal-user-bio">{{ user.bio }}</span>
+          </div>
+          <button class="modal-user-btn" *ngIf="modalTitle === 'Amigos'">Mensagem</button>
+          <button class="modal-user-btn-follow" *ngIf="modalTitle === 'Seguidores'" (click)="followBack(user.id)">
+            Seguir de volta
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EDITAR PERFIL COM ALTERAR SENHA -->
+  <div class="edit-modal-overlay" *ngIf="showEditModal" (click)="closeEditModalOnBackdrop($event)">
+    <div class="edit-modal-content">
+      <div class="edit-modal-header">
+        <h2>Editar perfil</h2>
+        <button class="edit-modal-close" (click)="closeEditModal()">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+      
+      <div class="edit-modal-body">
+        <div class="edit-field">
+          <label>Imagem de capa</label>
+          <div class="cover-preview" [style.backgroundImage]="coverImage ? 'url(' + coverImage + ')' : 'var(--gradient-hero)'">
+            <button class="change-cover-btn" (click)="openCoverUpload()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M17 3l4 4-7 7H10v-4l7-7z"/>
+                <path d="M4 20h16"/>
+              </svg>
+              Alterar capa
+            </button>
+          </div>
+        </div>
+        
+        <div class="edit-field">
+          <label>Foto de perfil</label>
+          <div class="avatar-preview">
+            <img [src]="editForm.avatar" class="preview-avatar">
+            <div class="avatar-actions">
+              <button class="change-avatar-btn" (click)="openAvatarUpload()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 3l4 4-7 7H10v-4l7-7z"/>
+                  <path d="M4 20h16"/>
+                </svg>
+                Alterar
+              </button>
+              <button class="remove-avatar-btn" (click)="removeAvatar()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+                Remover
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="edit-field">
+          <label>Nome</label>
+          <input type="text" [(ngModel)]="editForm.name" class="edit-input">
+        </div>
+        
+        <div class="edit-field">
+          <label>Biografia</label>
+          <textarea [(ngModel)]="editForm.bio" rows="3" class="edit-textarea" placeholder="Escreve sobre ti..."></textarea>
+        </div>
+        
+        <div class="edit-field">
+          <label>Localização</label>
+          <input type="text" [(ngModel)]="editForm.location" class="edit-input" placeholder="Onde vives?">
+        </div>
+        
+        <div class="edit-field">
+          <label>Alterar senha</label>
+          <div class="password-change">
+            <input type="password" [(ngModel)]="passwordForm.currentPassword" placeholder="Senha atual" class="edit-input">
+            <input type="password" [(ngModel)]="passwordForm.newPassword" placeholder="Nova senha" class="edit-input">
+            <input type="password" [(ngModel)]="passwordForm.confirmPassword" placeholder="Confirmar nova senha" class="edit-input">
+            <button class="change-password-btn" (click)="changePassword()">Atualizar senha</button>
+          </div>
+        </div>
+      </div>
+      
+      <div class="edit-modal-footer">
+        <button class="edit-cancel-btn" (click)="closeEditModal()">Cancelar</button>
+        <button class="edit-save-btn" (click)="saveProfile()">Guardar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Loading state -->
+<div *ngIf="isLoading" class="loading-state">
+  <div class="loading-spinner"></div>
+  <p>Carregando perfil...</p>
+</div>
+
+<!-- Error state -->
+<div *ngIf="!currentUser && !isLoading" class="error-state">
+  <p>Erro ao carregar perfil. Por favor, faça login novamente.</p>
+  <button class="retry-btn" (click)="logout()">Voltar ao login</button>
+</div>

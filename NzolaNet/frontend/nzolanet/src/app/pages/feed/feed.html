@@ -1,0 +1,265 @@
+<div class="feed-container">
+  <!-- HEADER -->
+  <header class="header">
+    <div class="header-content">
+      <div class="logo">
+        <div class="logo-circle">
+          <span class="star">✦</span>
+        </div>
+        <h1>NzolaNet</h1>
+      </div>
+      
+      <div class="search-bar">
+  <svg class="search-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+  </svg>
+  <input 
+    type="text" 
+    [(ngModel)]="searchQuery"
+    (input)="onSearch()"
+    (focus)="onSearch()"
+    placeholder="Procurar pessoas, posts, hashtags…">
+  
+  <!-- Resultados da pesquisa -->
+  <div class="search-dropdown" *ngIf="showSearchResults && searchQuery">
+    <div class="search-results-container">
+      <div *ngFor="let result of searchResults" class="search-result-item" (click)="result.type === 'user' ? goToProfile(result.id) : goToHashtag(result.name)">
+        <div class="search-result-avatar" *ngIf="result.type === 'user'">
+          <img [src]="result.avatar" [alt]="result.name">
+        </div>
+        <div class="search-result-icon" *ngIf="result.type === 'hashtag'">
+          <span class="hashtag-icon">#</span>
+        </div>
+        <div class="search-result-info">
+          <div class="search-result-name">{{ result.name }}</div>
+          <div class="search-result-handle">{{ result.handle }}</div>
+          <div class="search-result-bio" *ngIf="result.bio">{{ result.bio }}</div>
+        </div>
+        <div class="search-result-type">
+          <span class="type-badge" [class.user-badge]="result.type === 'user'" [class.hashtag-badge]="result.type === 'hashtag'">
+            {{ result.type === 'user' ? '👤 Pessoa' : '#️⃣ Hashtag' }}
+          </span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+      <div class="header-actions">
+        <a routerLink="/feed/notificacoes" class="icon-btn">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+          </svg>
+          <span class="badge" *ngIf="incomingCount > 0">{{ incomingCount }}</span>
+        </a>
+        <a routerLink="/feed/perfil" class="avatar-link">
+          <div class="avatar-small" [style.backgroundImage]="'url(' + userAvatar + ')'" [style.backgroundSize]="'cover'" [style.backgroundPosition]="'center'"></div>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <div class="main-layout">
+    <aside class="sidebar-left">
+      <nav class="nav-menu">
+        <a routerLink="/feed" routerLinkActive="active" [routerLinkActiveOptions]="{exact: true}" class="nav-item">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
+          </svg>
+          <span>Feed</span>
+        </a>
+        
+        <a routerLink="/feed/amigos" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+          </svg>
+          <span>Pessoas que talvez conheças</span>
+        </a>
+        
+        <a routerLink="/feed/explorar" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <span>Explorar</span>
+        </a>
+        
+        <a routerLink="/feed/notificacoes" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+          </svg>
+          <span>Notificações</span>
+          <span class="badge" *ngIf="incomingCount > 0">{{ incomingCount }}</span>
+        </a>
+        
+        <a routerLink="/feed/guardados" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path>
+          </svg>
+          <span>Guardados</span>
+        </a>
+        
+        <a routerLink="/feed/perfil" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+          </svg>
+          <span>Perfil</span>
+        </a>
+        
+        <a routerLink="/feed/definicoes" routerLinkActive="active" class="nav-item">
+          <svg class="nav-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+          <span>Definições</span>
+        </a>
+      </nav>
+      
+     <button class="new-post-btn" (click)="openPostModal()">
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+    <path d="M12 4v16m8-8H4"/>
+  </svg>
+  Nova publicação
+</button>
+    </aside>
+
+    <main class="feed-content">
+      <router-outlet></router-outlet>
+    </main>
+  </div>
+</div>
+
+
+<!-- MODAL DE NOVA PUBLICAÇÃO -->
+<!-- MODAL DE NOVA PUBLICAÇÃO -->
+<div class="modal-overlay" *ngIf="showPostModal" (click)="closePostModalOnBackdrop($event)">
+  <div class="modal-content post-modal" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <h3>Criar nova publicação</h3>
+      <button class="modal-close" (click)="closePostModal()">✕</button>
+    </div>
+    
+    <div class="modal-body">
+      <div class="composer-header">
+        <img [src]="me.avatar" class="avatar-composer">
+        <textarea [(ngModel)]="composer" placeholder="No que estás a pensar?" rows="3"></textarea>
+      </div>
+      
+      <!-- Preview da Imagem -->
+      <div class="image-preview" *ngIf="selectedImage">
+        <img [src]="selectedImage" class="preview-img">
+        <button class="remove-image-btn" (click)="removeImage()">✕</button>
+      </div>
+      
+      <!-- Preview do Vídeo -->
+      <div class="video-preview" *ngIf="selectedVideo">
+        <video [src]="selectedVideo" class="preview-video" controls></video>
+        <button class="remove-video-btn" (click)="removeVideo()">✕</button>
+      </div>
+      
+      <div class="color-preview" *ngIf="selectedPostColor && !selectedImage && !selectedVideo">
+        <div class="color-preview-box" [style.backgroundColor]="selectedPostColor"></div>
+        <span>Cor selecionada para o post</span>
+        <button class="remove-color-btn" (click)="removeSelectedColor()">✕</button>
+      </div>
+      
+      <div class="emoji-picker" *ngIf="showEmojiPicker">
+        <div class="emoji-list">
+          <button *ngFor="let emoji of emojis" class="emoji-btn" (click)="addEmoji(emoji)">{{ emoji }}</button>
+        </div>
+      </div>
+      
+      <div class="composer-actions">
+        <div class="action-buttons">
+          <button (click)="uploadImage()" [class.active]="selectedImage">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+              <circle cx="8.5" cy="8.5" r="1.5"></circle>
+              <polyline points="22 14 16 8 4 20 12 12 16 16 22 14"></polyline>
+            </svg>
+            Foto
+          </button>
+          <button (click)="uploadVideo()" [class.active]="selectedVideo">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect>
+              <polygon points="9 8 16 12 9 16 9 8"></polygon>
+            </svg>
+            Vídeo
+          </button>
+          <button (click)="toggleEmojiPicker()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <path d="M8 14s1.5 2 4 2 4-2 4-2"></path>
+              <line x1="9" y1="9" x2="9.01" y2="9"></line>
+              <line x1="15" y1="9" x2="15.01" y2="9"></line>
+            </svg>
+            Emoji
+          </button>
+          <button (click)="toggleColorPicker()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 4.6C18.3 3.5 16.8 3 15 3c-1.7 0-3.2.5-4.4 1.6-1.2 1.1-1.8 2.6-1.8 4.4 0 1.7.5 3.2 1.6 4.4 1.1 1.2 2.6 1.8 4.4 1.8 1.7 0 3.2-.5 4.4-1.6 1.2-1.1 1.8-2.6 1.8-4.4 0-1.7-.6-3.2-1.6-4.4z"></path>
+            </svg>
+            Cor
+          </button>
+        </div>
+        <button class="publish-btn" (click)="publishPost()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="22" y1="2" x2="11" y2="13"></line>
+            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+          Publicar
+        </button>
+      </div>
+      
+      <div class="color-palette" *ngIf="showColorPicker">
+        <div class="color-buttons">
+          <button *ngFor="let color of colorPalette" 
+                  class="color-option" 
+                  [style.backgroundColor]="color.code"
+                  [class.active]="selectedPostColor === color.code"
+                  (click)="selectPostColor(color.code)">
+            <span class="color-tooltip">{{ color.name }}</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE ALERTA -->
+<div class="modal-overlay" *ngIf="showAlertModal" (click)="closeAlertModal()">
+  <div class="modal-content modal-{{ alertType }}" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-icon">
+        <svg *ngIf="alertType === 'error'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+        <svg *ngIf="alertType === 'success'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+          <polyline points="22 4 12 14.01 9 11.01"></polyline>
+        </svg>
+        <svg *ngIf="alertType === 'warning'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 9v4"></path>
+          <path d="M12 17h.01"></path>
+          <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"></path>
+        </svg>
+        <svg *ngIf="alertType === 'info'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+      </div>
+      <h3>{{ alertTitle }}</h3>
+      <button class="modal-close" (click)="closeAlertModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>{{ alertMessage }}</p>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-primary" (click)="closeAlertModal()">Entendi</button>
+    </div>
+  </div>
+</div>

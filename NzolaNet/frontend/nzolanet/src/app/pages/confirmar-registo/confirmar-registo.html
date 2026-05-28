@@ -1,0 +1,35 @@
+<div class="confirm-container">
+  <div class="confirm-card">
+    <div class="confirm-icon">
+      <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" stroke-linecap="round"/>
+        <polyline points="22 4 12 14.01 9 11.01" stroke-linecap="round"/>
+      </svg>
+    </div>
+    
+    <h1 class="confirm-title" *ngIf="!jaVerificado">Email verificado com sucesso!</h1>
+    <h1 class="confirm-title" *ngIf="jaVerificado">Conta já verificada!</h1>
+    
+    <p class="confirm-message" *ngIf="!jaVerificado">
+      O teu email foi verificado com sucesso!<br>
+      Agora podes entrar com as tuas credenciais.
+    </p>
+    <p class="confirm-message" *ngIf="jaVerificado">
+      A tua conta já estava verificada anteriormente.<br>
+      Podes entrar normalmente.
+    </p>
+    
+    <button class="login-btn" (click)="goToLogin()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M15 3h6v6"/>
+        <path d="M10 14L21 3"/>
+        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+      </svg>
+      Ir para o Login
+    </button>
+    
+    <p class="redirect-text">
+      A ser redirecionado em {{ countdown }} segundos...
+    </p>
+  </div>
+</div>
