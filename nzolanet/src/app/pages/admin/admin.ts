@@ -305,13 +305,15 @@ export class AdminComponent implements OnInit, OnDestroy {
     }
   }
 
-  getUserName(userId: string): string {
-    const user = this.users.find(u => u.id === userId);
-    return user ? user.name : userId.toString();
+  getUserName(userId: string | number): string {
+    const lookupId = userId?.toString();
+    const user = this.users.find(u => u.id === lookupId);
+    return user ? user.name : lookupId;
   }
 
-  getUserAvatar(userId: string): string {
-    const user = this.users.find(u => u.id === userId);
+  getUserAvatar(userId: string | number): string {
+    const lookupId = userId?.toString();
+    const user = this.users.find(u => u.id === lookupId);
     return user ? user.avatar : '';
   }
 
