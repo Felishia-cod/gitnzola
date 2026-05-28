@@ -7,7 +7,7 @@ import { UserService, UserData } from '../../services/user';
 import { PostService, Post, Comment } from '../../services/post';
 
 interface AppUser {
-  id: number;
+  id: string;
   name: string;
   email: string;
   handle: string;
@@ -129,14 +129,23 @@ export class AdminComponent implements OnInit, OnDestroy {
   }
 
   loadUsers() {
-    this.users = [
-      { id: 1, name: 'Admin NzolaNet', email: 'admin@nzolanet.ao', handle: '@admin', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100', bio: 'Administrador', is_admin: 1, is_active: 1, privacy: 'publico' },
-      { id: 2, name: 'Tu (Demo)', email: 'demo@nzolanet.ao', handle: '@demo', avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100', bio: 'Utilizador Demo', is_admin: 0, is_active: 1, privacy: 'publico' },
-      { id: 3, name: 'Nzinga Domingos', email: 'nzinga@nzolanet.ao', handle: '@nzinga', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100', bio: 'Fotógrafa', is_admin: 0, is_active: 1, privacy: 'publico' },
-      { id: 4, name: 'Kiala Bento', email: 'kiala@nzolanet.ao', handle: '@kiala_b', avatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=100', bio: 'Chef', is_admin: 0, is_active: 1, privacy: 'publico' },
-      { id: 5, name: 'Lukeni Afonso', email: 'lukeni@nzolanet.ao', handle: '@lukeni', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100', bio: 'DJ', is_admin: 0, is_active: 0, privacy: 'privado' },
-      { id: 6, name: 'Mbala João', email: 'mbala@nzolanet.ao', handle: '@mbala', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100', bio: 'Programador', is_admin: 0, is_active: 1, privacy: 'publico' }
-    ];
+    // Carregar utilizadores do backend via UserService
+    this.users = [];
+    this.userService.listUsers().then((data) => {
+      this.users = data.map((u: any) => ({
+        id: u.id?.toString() || Date.now().toString(),
+        name: u.nome || u.username || 'Sem nome',
+        email: u.email || '',
+        handle: u.username ? `@${u.username}` : (u.handle || `@${(u.nome||'').toLowerCase().replace(/\s/g,'')}`),
+        avatar: u.foto_perfil || 'https://i.pravatar.cc/150?img=' + (Math.floor(Math.random() * 70) + 1),
+        bio: u.bio || '',
+        is_admin: (u.is_admin === true || u.is_admin === 1) ? 1 : 0,
+        is_active: (u.is_active === true || u.is_active === 1) ? 1 : 0,
+        privacy: u.privacidade || u.privacy || 'publico'
+      }));
+    }).catch(err => {
+      console.error('❌ Erro ao carregar utilizadores no Admin:', err);
+    });
   }
 
   loadReports() {

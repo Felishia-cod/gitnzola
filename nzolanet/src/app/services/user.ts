@@ -34,6 +34,33 @@ export class UserService {
     this.loadUserFromLocalStorage();
   }
 
+  async listUsers(): Promise<any[]> {
+    const token = this.auth.getToken();
+    if (!token) {
+      console.error('❌ Sem token para listar utilizadores');
+      return [];
+    }
+
+    try {
+      const url = `${this.apiUrl}/?route=admin&action=listarUtilizadores`;
+      const headers = new HttpHeaders({
+        'Authorization': `Bearer ${token}`
+      });
+
+      const response: any = await firstValueFrom(this.http.get(url, { headers }));
+      console.log('📦 Resposta listarUtilizadores:', response);
+
+      if (response && response.success && Array.isArray(response.data)) {
+        return response.data;
+      }
+
+      return response.data || [];
+    } catch (error) {
+      console.error('❌ Erro ao listar utilizadores:', error);
+      return [];
+    }
+  }
+
   private loadUserFromLocalStorage() {
     const savedUser = this.auth.getUser();
     if (savedUser && savedUser.id) {
