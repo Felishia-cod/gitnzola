@@ -33,6 +33,7 @@ export const routes: Routes = [
   },
   // ADMIN - ROTA SEPARADA (FORA DO FEED)
   { path: 'admin', component: AdminComponent },
+  { path: 'home', redirectTo: '/feed', pathMatch: 'full' },
   { path: 'confirmar-registo', component: ConfirmarRegistoComponent },
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: '**', redirectTo: '/login' }

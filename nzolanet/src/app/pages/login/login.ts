@@ -26,6 +26,16 @@ export class LoginComponent {
   isLoading = false;
   currentUser: any = null;
 
+  private redirectAfterLogin(user: any): void {
+    const isAdmin = user?.isAdmin === true || user?.is_admin === true;
+
+    if (isAdmin) {
+      this.router.navigate(['/admin']);
+    } else {
+      this.router.navigate(['/home']);
+    }
+  }
+
   constructor(
     private fb: FormBuilder,
     private auth: Auth,
@@ -36,9 +46,8 @@ export class LoginComponent {
       password: ['', Validators.required]
     });
     
-    // Se já estiver logado, redirecionar para o feed
     if (this.auth.isAuthenticated()) {
-      this.router.navigate(['/feed']);
+      this.redirectAfterLogin(this.auth.getUser());
     }
   }
 
@@ -59,9 +68,10 @@ export class LoginComponent {
         this.isLoading = false;
 
         if (response.success) {
-          this.currentUser = response.data?.user;
+          const user = response.user || response.data?.user || this.auth.getUser();
+          this.currentUser = user;
           alert('Login efetuado com sucesso!');
-          this.router.navigate(['/feed']);
+          this.redirectAfterLogin(user);
         } else {
           alert(response.message || 'Erro ao fazer login');
         }
