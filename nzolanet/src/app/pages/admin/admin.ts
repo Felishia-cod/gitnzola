@@ -42,7 +42,7 @@ interface Report {
 })
 export class AdminComponent implements OnInit, OnDestroy {
   currentUser: UserData = {
-    id: 'admin-1', // ADICIONADO: id
+    id: 'admin-1', 
     name: 'Admin',
     handle: '@admin',
     avatar: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E",
@@ -79,7 +79,6 @@ export class AdminComponent implements OnInit, OnDestroy {
   confirmAction: any = null;
   confirmMessage: string = '';
 
-  // Modal de perfil do user
   showUserProfileModal: boolean = false;
   selectedProfileUser: AppUser | null = null;
   profileTab: string = 'posts';
@@ -166,7 +165,7 @@ export class AdminComponent implements OnInit, OnDestroy {
   async loadUsers() {
     const endpoints = [
       `${this.apiUrl}/?route=user&action=pesquisarUtilizadores&q=a`,
-      `${this.apiUrl}/?route=user&action=listar`,
+      `${this.apiUrl}/?route=admin&action=listarUtilizadores`,
       `${this.apiUrl}/?route=user&action=todos`,
       `${this.apiUrl}/?route=admin&action=listarUsers`
     ];
