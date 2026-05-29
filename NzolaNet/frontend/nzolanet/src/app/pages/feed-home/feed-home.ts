@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
@@ -99,7 +99,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     private userService: UserService,
     private postService: PostService,
     private followService: FollowService,
-    private router: Router
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
@@ -514,8 +515,6 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.showColorPickerForNewPost = false;
 
         this.showAlert('Sucesso', 'Publicação criada com sucesso!', 'success');
-        
-        this.postService.refreshPosts();
         console.log('✅ Post publicado e feed atualizado');
       } else {
         this.showAlert('Erro', result?.message || 'Erro ao criar publicação', 'error');
@@ -525,6 +524,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.showAlert('Erro', 'Ocorreu um erro ao publicar. Tente novamente.', 'error');
     } finally {
       this.isPublishing = false;
+      this.cdr.detectChanges();
     }
   }
 

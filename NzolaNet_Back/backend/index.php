@@ -9,6 +9,29 @@ declare(strict_types=1);
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
+
+// Servir ficheiros estáticos (uploads) diretamente
+$requestUri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+if (preg_match('#^/uploads/(perfil|capa|posts|videos)/.+#', $requestUri)) {
+    $filePath = __DIR__ . $requestUri;
+    if (file_exists($filePath)) {
+        $mimeTypes = [
+            'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg',
+            'png' => 'image/png', 'webp' => 'image/webp',
+            'mp4' => 'video/mp4', 'webm' => 'video/webm',
+            'mov' => 'video/quicktime', 'mpeg' => 'video/mpeg'
+        ];
+        $ext = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+        header('Content-Type: ' . ($mimeTypes[$ext] ?? 'application/octet-stream'));
+        header('Content-Length: ' . filesize($filePath));
+        readfile($filePath);
+        exit();
+    }
+    http_response_code(404);
+    echo json_encode(["success" => false, "message" => "Ficheiro não encontrado"]);
+    exit();
+}
+
 header("Content-Type: application/json");
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -177,6 +200,7 @@ require_once __DIR__ . "/controllers/UploadController.php";
 // ============================================================
 
 require_once __DIR__ . "/utils/Validator.php";
+require_once __DIR__ . "/utils/MimeTypeDetector.php";
 
 // ============================================================
 // CONEXÃO À BASE DE DADOS

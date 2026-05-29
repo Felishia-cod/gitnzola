@@ -11,6 +11,7 @@ class PostComMediaDTO
         public ?string  $autor_username,
         public ?string  $autor_foto_perfil,
         public ?string  $conteudo,
+        public ?string  $cor,
         public bool     $eliminado,
         public string   $criado_em,
         public string   $atualizado_em,

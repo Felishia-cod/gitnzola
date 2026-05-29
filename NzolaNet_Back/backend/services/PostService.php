@@ -31,6 +31,7 @@ class PostService extends BaseService implements IPostService
             id:            $id,
             user_id:       $userId,
             conteudo:      $dto->conteudo,
+            cor:           $dto->cor,
             eliminado:     false,
             criado_em:     date("Y-m-d H:i:s"),
             atualizado_em: date("Y-m-d H:i:s")
@@ -113,6 +114,7 @@ class PostService extends BaseService implements IPostService
         autor_username:    $autor?->username       ?? null,
         autor_foto_perfil: $autor?->foto_perfil    ?? null,
         conteudo:          $post->conteudo,
+        cor:               $post->cor,
         eliminado:         $post->eliminado,
         criado_em:         $post->criado_em,
         atualizado_em:     $post->atualizado_em,

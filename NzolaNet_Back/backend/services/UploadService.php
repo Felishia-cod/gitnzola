@@ -73,9 +73,7 @@ class UploadService
             ];
         }
 
-        $finfo    = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
+        $mimeType = MimeTypeDetector::detect($file['tmp_name'], $file['name']);
 
         if (!in_array($mimeType, $this->imageMimes)) {
             return [
@@ -107,9 +105,7 @@ class UploadService
             ];
         }
 
-        $finfo    = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
+        $mimeType = MimeTypeDetector::detect($file['tmp_name'], $file['name']);
 
         if (!in_array($mimeType, $this->videoMimes)) {
             return [
@@ -144,7 +140,10 @@ class UploadService
             ];
         }
 
-        $url = "http://localhost:8081/NzolaNet/backend/uploads/$pasta/" . $nomeUnico;
+        $protocolo = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8081';
+        $base = ($host === 'localhost:8081') ? "$protocolo://$host/NzolaNet/backend" : "$protocolo://$host";
+        $url = "$base/uploads/$pasta/" . $nomeUnico;
 
         return [
             "success" => true,

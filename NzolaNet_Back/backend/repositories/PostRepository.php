@@ -13,10 +13,10 @@ class PostRepository implements IPostRepository
     {
         $sql = "
             INSERT INTO posts (
-                id, user_id, conteudo,
+                id, user_id, conteudo, cor,
                 eliminado, criado_em, atualizado_em
             ) VALUES (
-                :id, :user_id, :conteudo,
+                :id, :user_id, :conteudo, :cor,
                 :eliminado, :criado_em, :atualizado_em
             )
         ";
@@ -25,6 +25,7 @@ class PostRepository implements IPostRepository
         $stmt->bindValue(':id',            $post->id);
         $stmt->bindValue(':user_id',       $post->user_id);
         $stmt->bindValue(':conteudo',      $post->conteudo);
+        $stmt->bindValue(':cor',           $post->cor);
         $stmt->bindValue(':eliminado',     $post->eliminado, PDO::PARAM_BOOL);
         $stmt->bindValue(':criado_em',     $post->criado_em);
         $stmt->bindValue(':atualizado_em', $post->atualizado_em);
@@ -48,13 +49,14 @@ class PostRepository implements IPostRepository
     {
         $sql = "
             UPDATE posts
-            SET conteudo = :conteudo, atualizado_em = NOW()
+            SET conteudo = :conteudo, cor = :cor, atualizado_em = NOW()
             WHERE id = :id
         ";
 
         $stmt = $this->conn->prepare($sql);
         return $stmt->execute([
             ":conteudo" => $dto->conteudo,
+            ":cor"      => $dto->cor,
             ":id"       => $postId
         ]);
     }
@@ -281,6 +283,7 @@ class PostRepository implements IPostRepository
             id:            $data['id'],
             user_id:       $data['user_id'],
             conteudo:      $data['conteudo'] ?? null,
+            cor:           $data['cor'] ?? null,
             eliminado:     (bool) $data['eliminado'],
             criado_em:     $data['criado_em'],
             atualizado_em: $data['atualizado_em']

@@ -309,7 +309,8 @@ export class FeedComponent implements OnInit {
     
     const result = await this.postService.addPost({
       conteudo: this.composer || '',
-      media: mediaFiles.length > 0 ? mediaFiles : undefined
+      media: mediaFiles.length > 0 ? mediaFiles : undefined,
+      backgroundColor: this.selectedPostColor || undefined
     });
     
     if (result?.success) {

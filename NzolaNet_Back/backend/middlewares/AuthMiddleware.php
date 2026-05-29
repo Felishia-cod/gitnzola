@@ -17,13 +17,20 @@ class AuthMiddleware
 
     public function handle(): UserDTO
     {
-        $headers = getallheaders();
+        $authHeader = $_SERVER['HTTP_AUTHORIZATION']
+            ?? $_SERVER['REDIRECT_HTTP_AUTHORIZATION']
+            ?? null;
 
-        if (!isset($headers['Authorization'])) {
+        if (!$authHeader) {
+            $headers = getallheaders();
+            $authHeader = $headers['Authorization'] ?? $headers['authorization'] ?? null;
+        }
+
+        if (!$authHeader) {
             $this->unauthorized("Token não fornecido");
         }
 
-        $token = str_replace("Bearer ", "", $headers['Authorization']);
+        $token = str_replace("Bearer ", "", $authHeader);
 
         if (empty($token)) {
             $this->unauthorized("Token inválido");

@@ -13,6 +13,7 @@ switch ($action) {
             id:            "",
             user_id:       $authUser->id,
             conteudo:      $input['conteudo'] ?? null,
+            cor:           $input['cor'] ?? null,
             eliminado:     false,
             criado_em:     "",
             atualizado_em: ""
@@ -28,6 +29,7 @@ switch ($action) {
             id:            $id,
             user_id:       $authUser->id,
             conteudo:      $input['conteudo'] ?? null,
+            cor:           $input['cor'] ?? null,
             eliminado:     false,
             criado_em:     "",
             atualizado_em: ""

@@ -1,5 +1,12 @@
 <?php
 
+header("Access-Control-Allow-Origin: *");
+
+// Aceitar token via query param para evitar CORS preflight no upload
+if (!isset($_SERVER['HTTP_AUTHORIZATION']) && isset($_GET['token'])) {
+    $_SERVER['HTTP_AUTHORIZATION'] = 'Bearer ' . $_GET['token'];
+}
+
 $authUser   = $authMiddleware->handle();
 $action     = $_GET['action'] ?? null;
 

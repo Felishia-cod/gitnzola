@@ -1,4 +1,9 @@
 -- ============================================================
+-- MIGRAÇÃO PARA BASES EXISTENTES (executar se a coluna não existir)
+-- ============================================================
+-- ALTER TABLE posts ADD COLUMN IF NOT EXISTS cor VARCHAR(20) DEFAULT NULL;
+
+-- ============================================================
 -- EXTENSÕES
 -- ============================================================
 
@@ -132,6 +137,7 @@ CREATE TABLE posts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id UUID NOT NULL,
     conteudo TEXT,
+    cor VARCHAR(20) DEFAULT NULL,
     eliminado BOOLEAN DEFAULT FALSE,
     criado_em TIMESTAMP DEFAULT NOW(),
     atualizado_em TIMESTAMP DEFAULT NOW(),

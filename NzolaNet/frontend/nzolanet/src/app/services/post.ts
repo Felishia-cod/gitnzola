@@ -1,6 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, firstValueFrom } from 'rxjs';
+import { timeout } from 'rxjs/operators';
 import { Auth } from './auth';
 
 export interface Comment {
@@ -87,15 +88,6 @@ export class PostService {
     };
   }
 
-  private getFormDataHeaders() {
-    const token = this.auth.getToken();
-    return {
-      headers: new HttpHeaders({
-        'Authorization': `Bearer ${token}`
-      })
-    };
-  }
-
   private mapPost(backend: any): Post {
     let imageUrl: string | undefined;
     let videoUrl: string | undefined;
@@ -122,6 +114,7 @@ export class PostService {
       text: backend.conteudo || '',
       image: imageUrl,
       video: videoUrl,
+      bgColor: backend.cor || undefined,
       bazes: backend.total_bazes || 0,
       comments: [],
       commentsCount: backend.total_comentarios || 0,
@@ -200,16 +193,27 @@ export class PostService {
         )
       );
 
-      if (response.success && postData.media && postData.media.length > 0) {
-        const postId = response.data?.id;
-        if (postId) {
-          for (const file of postData.media) {
-            this.uploadMedia(postId, file);
-          }
-        }
-      }
-
       if (response.success) {
+        console.log('📦 Resposta do servidor:', JSON.stringify(response));
+        if (postData.media && postData.media.length > 0) {
+          await this.loadPostsFromAPI();
+          const posts = this.getPosts();
+          const novoPost = posts.length > 0 ? posts[0] : null;
+          const postId = response.data?.id || response.id || response.post_id || (novoPost ? novoPost.id.toString() : null);
+          console.log('📎 Post criado, id:', postId, 'ficheiros:', postData.media.length);
+          if (postId) {
+            const uploadOk = await this.uploadMedia(postId, postData.media);
+            if (!uploadOk) {
+              console.warn('⚠️ Post criado mas media falhou.');
+            } else {
+              console.log('✅ Media enviada com sucesso');
+            }
+          } else {
+            console.error('❌ Não foi possível obter o post_id');
+          }
+          await this.loadPostsFromAPI();
+          return { success: true, message: 'Publicação criada com sucesso!' };
+        }
         await this.loadPostsFromAPI();
         return { success: true, message: 'Publicação criada com sucesso!' };
       }
@@ -219,22 +223,38 @@ export class PostService {
     }
   }
 
-  private async uploadMedia(postId: string, file: File): Promise<void> {
-    const formData = new FormData();
-    formData.append('media', file);
-    formData.append('post_id', postId);
+  private async uploadMedia(postId: string, files: File[]): Promise<boolean> {
+    let allOk = true;
+    const token = this.auth.getToken();
+    if (!token) return false;
 
-    try {
-      await firstValueFrom(
-        this.http.post(
-          `${this.apiUrl}/?route=upload&action=media`,
-          formData,
-          this.getFormDataHeaders()
-        )
-      );
-    } catch (error) {
-      console.error('Erro ao fazer upload de media:', error);
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('media', file);
+      formData.append('post_id', postId);
+
+      try {
+        console.log('📤 Enviando media para post', postId, '- ficheiro:', file.name, file.size);
+        const res: any = await firstValueFrom(
+          this.http.post(
+            `${this.apiUrl}/?route=upload&action=media&token=${encodeURIComponent(token)}`,
+            formData,
+            { responseType: 'text' as 'json' }
+          ).pipe(timeout(30000))
+        );
+        console.log('📥 Resposta upload (texto):', res);
+        const parsed = typeof res === 'string' ? JSON.parse(res) : res;
+        if (!parsed?.success) {
+          console.error('Upload devolveu erro:', parsed);
+          allOk = false;
+        }
+      } catch (error: any) {
+        console.error('❌ Erro ao fazer upload de media:', error.status, error.message);
+        if (error.error) console.error('   Corpo da resposta:', error.error);
+        allOk = false;
+      }
     }
+    return allOk;
   }
 
   async deletePost(postId: number): Promise<any> {

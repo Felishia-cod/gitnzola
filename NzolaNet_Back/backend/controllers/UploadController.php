@@ -91,6 +91,7 @@ class UploadController extends BaseController
 
     public function uploadMedia(string $postId): void
     {
+        header("Access-Control-Allow-Origin: *");
         if (!isset($_FILES['media'])) {
             $this->json([
                 "success" => false,
@@ -101,9 +102,7 @@ class UploadController extends BaseController
         $file = $_FILES['media'];
 
         // Detectar tipo
-        $finfo    = finfo_open(FILEINFO_MIME_TYPE);
-        $mimeType = finfo_file($finfo, $file['tmp_name']);
-        finfo_close($finfo);
+        $mimeType = MimeTypeDetector::detect($file['tmp_name'], $file['name']);
 
         $imageMimes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
         $videoMimes = ['video/mp4', 'video/mpeg', 'video/quicktime', 'video/webm'];

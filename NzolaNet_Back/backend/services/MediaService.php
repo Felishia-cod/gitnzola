@@ -31,10 +31,7 @@ public function upload(string $postId, array $file): array
     }
 
     // Detectar tipo pelo mime
-    $finfo    = finfo_open(FILEINFO_MIME_TYPE);
-    $mimeType = finfo_file($finfo, $file['tmp_name']);
-    finfo_close($finfo);
-
+    $mimeType = MimeTypeDetector::detect($file['tmp_name'], $file['name']);
     $tipo = $this->getTipo($mimeType);
 
     if ($tipo === 'unknown') {
