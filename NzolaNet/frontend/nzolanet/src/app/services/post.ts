@@ -196,10 +196,19 @@ export class PostService {
       if (response.success) {
         console.log('📦 Resposta do servidor:', JSON.stringify(response));
         if (postData.media && postData.media.length > 0) {
-          await this.loadPostsFromAPI();
-          const posts = this.getPosts();
-          const novoPost = posts.length > 0 ? posts[0] : null;
-          const postId = response.data?.id || response.id || response.post_id || (novoPost ? novoPost.id.toString() : null);
+          // Tentar obter postId da resposta
+          let postId: string | null = response.data?.id || response.id || response.post_id || null;
+
+          // Fallback: buscar no feed os dados crus (evitar parseInt que dá NaN para UUIDs)
+          if (!postId) {
+            const feedRes: any = await firstValueFrom(
+              this.http.get(`${this.apiUrl}/?route=post&action=feed&page=1&limit=1`, this.getHeaders())
+            ).catch(() => null);
+            if (feedRes?.success && feedRes.data?.[0]?.id) {
+              postId = feedRes.data[0].id;
+            }
+          }
+
           console.log('📎 Post criado, id:', postId, 'ficheiros:', postData.media.length);
           if (postId) {
             const uploadOk = await this.uploadMedia(postId, postData.media);
