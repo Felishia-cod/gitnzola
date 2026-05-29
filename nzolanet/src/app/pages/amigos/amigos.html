@@ -52,10 +52,10 @@
     <h2 class="section-title">Resultados da pesquisa</h2>
     <ul class="users-list">
       <li *ngFor="let user of filteredUsers" class="user-item">
-        <div class="user-avatar">
+        <div class="user-avatar clickable" (click)="viewProfile(user.id)">
           <img [src]="user.avatar" [alt]="user.name">
         </div>
-        <div class="user-info">
+        <div class="user-info clickable" (click)="viewProfile(user.id)">
           <div class="user-name">{{ user.name }}</div>
           <div class="user-detail">
             {{ user.handle }} · {{ user.bio }}
@@ -139,10 +139,10 @@
     </div>
     <ul class="users-list" *ngIf="friends.length > 0">
       <li *ngFor="let userId of friends" class="user-item">
-        <div class="user-avatar">
+        <div class="user-avatar clickable" (click)="viewProfile(userId)">
           <img [src]="getUser(userId)?.avatar" [alt]="getUser(userId)?.name">
         </div>
-        <div class="user-info">
+        <div class="user-info clickable" (click)="viewProfile(userId)">
           <div class="user-name">{{ getUser(userId)?.name }}</div>
           <div class="user-detail">
             {{ getUser(userId)?.handle }} · {{ getUser(userId)?.bio }}
@@ -171,10 +171,10 @@
     <h2 class="section-title">Pedidos pendentes ({{ incomingRequests.length }})</h2>
     <ul class="users-list">
       <li *ngFor="let userId of incomingRequests" class="user-item">
-        <div class="user-avatar">
+        <div class="user-avatar clickable" (click)="viewProfile(userId)">
           <img [src]="getUser(userId)?.avatar" [alt]="getUser(userId)?.name">
         </div>
-        <div class="user-info">
+        <div class="user-info clickable" (click)="viewProfile(userId)">
           <div class="user-name">{{ getUser(userId)?.name }}</div>
           <div class="user-detail">
             {{ getUser(userId)?.handle }} · {{ getUser(userId)?.bio }}
@@ -207,10 +207,10 @@
     <h2 class="section-title">Pedidos enviados ({{ outgoingRequests.length }})</h2>
     <ul class="users-list">
       <li *ngFor="let userId of outgoingRequests" class="user-item">
-        <div class="user-avatar">
+        <div class="user-avatar clickable" (click)="viewProfile(userId)">
           <img [src]="getUser(userId)?.avatar" [alt]="getUser(userId)?.name">
         </div>
-        <div class="user-info">
+        <div class="user-info clickable" (click)="viewProfile(userId)">
           <div class="user-name">{{ getUser(userId)?.name }}</div>
           <div class="user-detail">
             {{ getUser(userId)?.handle }} · {{ getUser(userId)?.bio }}
@@ -234,10 +234,10 @@
     <h2 class="section-title">Pessoas que podes conhecer</h2>
     <ul class="users-list">
       <li *ngFor="let user of suggestedUsers" class="user-item">
-        <div class="user-avatar">
+        <div class="user-avatar clickable" (click)="viewProfile(user.id)">
           <img [src]="user.avatar" [alt]="user.name">
         </div>
-        <div class="user-info">
+        <div class="user-info clickable" (click)="viewProfile(user.id)">
           <div class="user-name">{{ user.name }}</div>
           <div class="user-detail">
             {{ user.handle }} · {{ user.bio }}

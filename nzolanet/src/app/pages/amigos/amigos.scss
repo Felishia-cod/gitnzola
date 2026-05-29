@@ -133,6 +133,10 @@
   flex-shrink: 0;
 }
 
+.clickable {
+  cursor: pointer;
+}
+
 // BOTÕES
 .accept-btn {
   display: inline-flex;

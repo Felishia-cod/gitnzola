@@ -62,12 +62,13 @@
             Cor
           </button>
         </div>
-        <button class="publish-btn" (click)="publish()">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <button class="publish-btn" (click)="publish()" [disabled]="isPublishing">
+          <svg *ngIf="!isPublishing" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <line x1="22" y1="2" x2="11" y2="13"></line>
             <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
           </svg>
-          Publicar
+          <span *ngIf="isPublishing" class="spinner"></span>
+          {{ isPublishing ? 'Publicando...' : 'Publicar' }}
         </button>
       </div>
       
@@ -103,9 +104,9 @@
               </svg>
             </button>
             <div class="menu-dropdown" *ngIf="post.showMenu">
-              <button *ngIf="post.userId === me.id" (click)="editPost(post)">✏️ Editar</button>
-              <button *ngIf="post.userId === me.id" (click)="deletePost(post.id)">🗑️ Eliminar</button>
-              <button *ngIf="post.userId !== me.id" (click)="openReportPostModal(post.id, post.text, post.userName)">🚩 Denunciar</button>
+              <button *ngIf="isOwnPost(post)" (click)="editPost(post)">✏️ Editar</button>
+              <button *ngIf="isOwnPost(post)" (click)="deletePost(post.id)">🗑️ Eliminar</button>
+              <button *ngIf="!isOwnPost(post)" (click)="openReportPostModal(post.id, post.text, post.userName)">🚩 Denunciar</button>
             </div>
           </div>
         </div>
@@ -169,11 +170,11 @@
                   <span class="comment-handle">{{ comment.userHandle }}</span>
                   <span class="comment-time">{{ comment.time }}</span>
                   <div class="comment-actions-header">
-                    <ng-container *ngIf="comment.userId === me.id">
+                    <ng-container *ngIf="isOwnComment(comment)">
                       <button class="comment-edit-btn" (click)="editComment(comment)" title="Editar">✏️</button>
                       <button class="comment-delete-btn" (click)="deleteComment(post.id, comment.id)" title="Eliminar">🗑️</button>
                     </ng-container>
-                    <button *ngIf="comment.userId !== me.id" class="comment-report-btn" (click)="openReportCommentModal(comment.id, comment.text, comment.userName)" title="Denunciar">🚩</button>
+                    <button *ngIf="!isOwnComment(comment)" class="comment-report-btn" (click)="openReportCommentModal(comment.id, comment.text, comment.userName)" title="Denunciar">🚩</button>
                   </div>
                 </div>
                 
@@ -208,11 +209,11 @@
                         <span class="reply-handle">{{ reply.userHandle }}</span>
                         <span class="reply-time">{{ reply.time }}</span>
                         <div class="reply-actions-header">
-                          <ng-container *ngIf="reply.userId === me.id">
+                          <ng-container *ngIf="isOwnReply(reply)">
                             <button class="reply-edit-btn" (click)="editComment(reply)" title="Editar">✏️</button>
                             <button class="reply-delete-btn" (click)="deleteComment(post.id, reply.id)" title="Eliminar">🗑️</button>
                           </ng-container>
-                          <button *ngIf="reply.userId !== me.id" class="reply-report-btn" (click)="openReportCommentModal(reply.id, reply.text, reply.userName)" title="Denunciar">🚩</button>
+                          <button *ngIf="!isOwnReply(reply)" class="reply-report-btn" (click)="openReportCommentModal(reply.id, reply.text, reply.userName)" title="Denunciar">🚩</button>
                         </div>
                       </div>
                       <div *ngIf="reply.isEditing" class="reply-edit">

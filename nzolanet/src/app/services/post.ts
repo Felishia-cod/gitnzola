@@ -1,11 +1,12 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { BehaviorSubject, firstValueFrom } from 'rxjs';
+import { timeout } from 'rxjs/operators';
 import { Auth } from './auth';
 
 export interface Comment {
   id: number;
-  userId: number;
+  userId: string;
   userName: string;
   userHandle: string;
   userAvatar: string;
@@ -27,7 +28,7 @@ export interface Comment {
 
 export interface Post {
   id: number;
-  userId: number;
+  userId: string;
   userName: string;
   userHandle: string;
   userAvatar: string;
@@ -50,20 +51,31 @@ export interface Post {
   timestamp?: number;
 }
 
+const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E";
+
 @Injectable({ providedIn: 'root' })
+
 export class PostService {
   private apiUrl = 'https://nzolanet-back.onrender.com';
   private postsSubject = new BehaviorSubject<Post[]>([]);
   public posts$ = this.postsSubject.asObservable();
-  
-  // Cache de usuários para não buscar repetidamente
-  private usersCache: Map<string, any> = new Map();
 
   constructor(
     private http: HttpClient,
     private auth: Auth
   ) {
     this.loadPostsFromAPI();
+  }
+
+  private normalizeUrl(url: string | null | undefined, fallback: string = ''): string {
+    if (!url) return fallback;
+    if (url.includes('localhost')) {
+      return url.replace(/https?:\/\/localhost:\d+\/NzolaNet\/backend/g, this.apiUrl);
+    }
+    if (url.startsWith('/NzolaNet/backend')) {
+      return this.apiUrl + url.replace('/NzolaNet/backend', '');
+    }
+    return url;
   }
 
   private getHeaders() {
@@ -76,235 +88,182 @@ export class PostService {
     };
   }
 
-  private getFormDataHeaders() {
-    const token = this.auth.getToken();
+  private mapPost(backend: any): Post {
+    let imageUrl: string | undefined;
+    let videoUrl: string | undefined;
+
+    if (backend.media) {
+      if (typeof backend.media === 'object' && backend.media !== null) {
+        if (backend.media.tipo === 'imagem' && backend.media.url) {
+          imageUrl = this.normalizeUrl(backend.media.url);
+        } else if (backend.media.tipo === 'video' && backend.media.url) {
+          videoUrl = this.normalizeUrl(backend.media.url);
+        }
+      }
+    }
+
     return {
-      headers: new HttpHeaders({
-        'Authorization': `Bearer ${token}`
-      })
+      id: parseInt(backend.id || '0'),
+      userId: (backend.user_id || '').toString(),
+      userName: backend.autor_nome || 'Carregando...',
+      userHandle: backend.autor_username
+        ? `@${backend.autor_username}`
+        : `@${(backend.autor_nome || '').toLowerCase().replace(/\s/g, '')}`,
+      userAvatar: this.normalizeUrl(backend.autor_foto_perfil, DEFAULT_AVATAR),
+      time: this.formatTime(backend.criado_em),
+      text: backend.conteudo || '',
+      image: imageUrl,
+      video: videoUrl,
+      bgColor: backend.cor || undefined,
+      bazes: backend.total_bazes || 0,
+      comments: [],
+      commentsCount: backend.total_comentarios || 0,
+      liked: backend.user_liked || false,
+      saved: false,
+      showComments: false,
+      newCommentText: '',
+      timestamp: new Date(backend.criado_em || Date.now()).getTime()
     };
+  }
+
+  private mapComments(backend: any[]): Comment[] {
+    if (!backend || !Array.isArray(backend)) return [];
+    return backend.map((c: any) => ({
+      id: parseInt(c.id || '0'),
+      userId: (c.user_id || c.userId || '').toString(),
+      userName: c.autor_nome || c.user_name || 'Usuário',
+      userHandle: c.autor_username
+        ? `@${c.autor_username}`
+        : `@${(c.autor_nome || 'user').toLowerCase().replace(/\s/g, '')}`,
+      userAvatar: this.normalizeUrl(c.autor_foto_perfil || c.user_avatar, DEFAULT_AVATAR),
+      text: c.conteudo || c.text || '',
+      time: this.formatTime(c.criado_em),
+      likes: 0,
+      likedByUser: false,
+      replies: [],
+      eliminado: c.eliminado || false,
+      removido_por_admin: c.removido_por_admin || false,
+      post_id: c.post_id
+    }));
   }
 
   async loadPostsFromAPI(): Promise<void> {
     try {
       const token = this.auth.getToken();
-      if (!token) {
-        console.error('❌ Sem token');
-        return;
-      }
+      if (!token) return;
 
       const response: any = await firstValueFrom(
         this.http.get(`${this.apiUrl}/?route=post&action=feed&page=1&limit=50`, this.getHeaders())
       );
-      
-      console.log('📦 Feed carregado (RAW):', response);
-      
-      let postsData = null;
-      if (response.success && response.data && Array.isArray(response.data)) {
-        postsData = response.data;
-      } else if (response.data && Array.isArray(response.data)) {
+
+      let postsData: any[] | null = null;
+      if (response.success && Array.isArray(response.data)) {
         postsData = response.data;
       } else if (Array.isArray(response)) {
         postsData = response;
       }
-      
+
       if (postsData && postsData.length > 0) {
-        // Para cada post, buscar os dados do usuário
-        const postsWithUsers = await this.enrichPostsWithUserData(postsData);
-        this.postsSubject.next(postsWithUsers);
-        console.log('✅ Feed atualizado com', postsWithUsers.length, 'posts com dados de usuário');
+        const posts = postsData.map(p => this.mapPost(p));
+        this.postsSubject.next(posts);
       } else {
-        console.log('📭 Nenhum post encontrado');
         this.postsSubject.next([]);
       }
     } catch (error) {
-      console.error('❌ Erro ao carregar feed:', error);
       this.postsSubject.next([]);
     }
   }
 
-  // Método para enriquecer os posts com dados do usuário
-  private async enrichPostsWithUserData(posts: any[]): Promise<Post[]> {
-    const enrichedPosts: Post[] = [];
-    
-    for (const post of posts) {
-      // Obter o userId
-      const userId = post.user_id || post.userId;
-      
-      let userData = null;
-      
-      // Verificar se já temos o usuário em cache
-      if (userId && this.usersCache.has(userId.toString())) {
-        userData = this.usersCache.get(userId.toString());
-        console.log(`📦 Usuário ${userId} encontrado no cache`);
-      } else if (userId) {
-        // Buscar dados do usuário do backend
-        userData = await this.fetchUserById(userId);
-        if (userData && userId) {
-          this.usersCache.set(userId.toString(), userData);
-        }
-      }
-      
-      // Criar o post enriquecido
-      enrichedPosts.push(this.transformSinglePost(post, userData));
-    }
-    
-    return enrichedPosts;
-  }
-
-  // Buscar usuário por ID
-  private async fetchUserById(userId: number): Promise<any> {
-    try {
-      const token = this.auth.getToken();
-      if (!token) return null;
-      
-      const url = `${this.apiUrl}/?route=user&action=obterPerfilDeUtilizador&id=${userId}`;
-      const response: any = await firstValueFrom(
-        this.http.get(url, this.getHeaders())
-      );
-      
-      console.log(`📦 Usuário ${userId} carregado:`, response);
-      
-      let userData = null;
-      if (response.success && response.data) {
-        userData = response.data;
-      } else if (response.user) {
-        userData = response.user;
-      } else if (response.data?.user) {
-        userData = response.data.user;
-      }
-      
-      return userData;
-    } catch (error) {
-      console.error(`❌ Erro ao buscar usuário ${userId}:`, error);
-      return null;
-    }
-  }
-
-  private transformSinglePost(post: any, userData: any): Post {
-    let imageUrl = undefined;
-    let videoUrl = undefined;
-    
-    if (post.media) {
-      if (Array.isArray(post.media)) {
-        const imageMedia = post.media.find((m: any) => m.tipo === 'imagem');
-        const videoMedia = post.media.find((m: any) => m.tipo === 'video');
-        if (imageMedia?.url) imageUrl = this.fixMediaUrl(imageMedia.url);
-        if (videoMedia?.url) videoUrl = this.fixMediaUrl(videoMedia.url);
-      } else if (typeof post.media === 'object' && post.media !== null) {
-        if (post.media.tipo === 'imagem') imageUrl = this.fixMediaUrl(post.media.url);
-        if (post.media.tipo === 'video') videoUrl = this.fixMediaUrl(post.media.url);
-      }
-    }
-    
-    // Usar os dados do usuário se disponíveis, senão usar fallback
-    return {
-      id: post.id || 0,
-      userId: userData?.id || post.user_id || 0,
-      userName: userData?.name || userData?.username || 'Carregando...',
-      userHandle: userData?.handle || `@${(userData?.name || '').toLowerCase().replace(/\s/g, '')}`,
-      userAvatar: userData?.avatar || 'https://i.pravatar.cc/150?img=1',
-      time: this.formatTime(post.criado_em),
-      text: post.conteudo || '',
-      image: imageUrl,
-      video: videoUrl,
-      bazes: post.bazes_count || 0,
-      comments: [],
-      commentsCount: post.comments_count || 0,
-      liked: post.user_liked || false,
-      saved: false,
-      showComments: false,
-      newCommentText: '',
-      timestamp: new Date(post.criado_em || Date.now()).getTime()
-    };
-  }
-
-  private transformPosts(apiPosts: any[]): Post[] {
-    if (!apiPosts || !Array.isArray(apiPosts)) return [];
-    
-    return apiPosts.map((post: any) => {
-      let imageUrl = undefined;
-      let videoUrl = undefined;
-      
-      if (post.media) {
-        if (Array.isArray(post.media)) {
-          const imageMedia = post.media.find((m: any) => m.tipo === 'imagem');
-          const videoMedia = post.media.find((m: any) => m.tipo === 'video');
-          if (imageMedia?.url) imageUrl = this.fixMediaUrl(imageMedia.url);
-          if (videoMedia?.url) videoUrl = this.fixMediaUrl(videoMedia.url);
-        } else if (typeof post.media === 'object' && post.media !== null) {
-          if (post.media.tipo === 'imagem') imageUrl = this.fixMediaUrl(post.media.url);
-          if (post.media.tipo === 'video') videoUrl = this.fixMediaUrl(post.media.url);
-        }
-      }
-      
-      // Se o backend já incluiu os dados do usuário
-      const userData = post.user || {};
-      const hasUserData = userData.name || post.user_name;
-      
-      return {
-        id: post.id || 0,
-        userId: userData.id || post.user_id || 0,
-        userName: userData.name || post.user_name || (hasUserData ? 'Usuário' : 'Carregando...'),
-        userHandle: userData.handle || post.user_handle || `@usuario`,
-        userAvatar: userData.avatar || post.user_avatar || 'https://i.pravatar.cc/150?img=1',
-        time: this.formatTime(post.criado_em),
-        text: post.conteudo || '',
-        image: imageUrl,
-        video: videoUrl,
-        bazes: post.bazes_count || 0,
-        comments: [],
-        commentsCount: post.comments_count || 0,
-        liked: post.user_liked || false,
-        saved: false,
-        showComments: false,
-        newCommentText: '',
-        timestamp: new Date(post.criado_em || Date.now()).getTime()
-      };
-    });
-  }
-
-  private fixMediaUrl(url: string): string {
-    if (!url) return '';
-    return url.replace(/http:\/\/localhost:\d+/g, this.apiUrl);
-  }
-
-  async addPost(postData: { conteudo: string; media?: File[] }): Promise<any> {
+  async addPost(postData: { conteudo: string; media?: File[]; backgroundColor?: string }): Promise<any> {
     const token = this.auth.getToken();
     if (!token) {
       return { success: false, message: 'Não autenticado' };
     }
 
-    const formData = new FormData();
-    formData.append('conteudo', postData.conteudo);
-    
-    if (postData.media && postData.media.length > 0) {
-      for (const file of postData.media) {
-        formData.append('media[]', file);
-      }
-    }
-
-    console.log('📤 Enviando post:', {
-      conteudo: postData.conteudo,
-      mediaCount: postData.media?.length || 0
-    });
-
     try {
+      const body: any = { conteudo: postData.conteudo };
+      if (postData.backgroundColor) {
+        body.cor = postData.backgroundColor;
+      }
       const response: any = await firstValueFrom(
-        this.http.post(`${this.apiUrl}/?route=post&action=criar`, formData, this.getFormDataHeaders())
+        this.http.post(
+          `${this.apiUrl}/?route=post&action=criar`,
+          body,
+          this.getHeaders()
+        )
       );
-      
-      console.log('📦 Resposta do backend:', response);
-      
+
       if (response.success) {
+        console.log('📦 Resposta do servidor:', JSON.stringify(response));
+        if (postData.media && postData.media.length > 0) {
+          // Tentar obter postId da resposta
+          let postId: string | null = response.data?.id || response.id || response.post_id || null;
+
+          // Fallback: buscar no feed os dados crus (evitar parseInt que dá NaN para UUIDs)
+          if (!postId) {
+            const feedRes: any = await firstValueFrom(
+              this.http.get(`${this.apiUrl}/?route=post&action=feed&page=1&limit=1`, this.getHeaders())
+            ).catch(() => null);
+            if (feedRes?.success && feedRes.data?.[0]?.id) {
+              postId = feedRes.data[0].id;
+            }
+          }
+
+          console.log('📎 Post criado, id:', postId, 'ficheiros:', postData.media.length);
+          if (postId) {
+            const uploadOk = await this.uploadMedia(postId, postData.media);
+            if (!uploadOk) {
+              console.warn('⚠️ Post criado mas media falhou.');
+            } else {
+              console.log('✅ Media enviada com sucesso');
+            }
+          } else {
+            console.error('❌ Não foi possível obter o post_id');
+          }
+          await this.loadPostsFromAPI();
+          return { success: true, message: 'Publicação criada com sucesso!' };
+        }
         await this.loadPostsFromAPI();
         return { success: true, message: 'Publicação criada com sucesso!' };
       }
       return response;
     } catch (error: any) {
-      console.error('❌ Erro ao criar post:', error);
       return { success: false, message: error.error?.message || 'Erro ao criar publicação' };
     }
+  }
+
+  private async uploadMedia(postId: string, files: File[]): Promise<boolean> {
+    let allOk = true;
+    const token = this.auth.getToken();
+    if (!token) return false;
+
+    for (const file of files) {
+      const formData = new FormData();
+      formData.append('media', file);
+      formData.append('post_id', postId);
+
+      try {
+        console.log('📤 Enviando media para post', postId, '- ficheiro:', file.name, file.size);
+        const res: any = await firstValueFrom(
+          this.http.post(
+            `${this.apiUrl}/?route=upload&action=media&token=${encodeURIComponent(token)}`,
+            formData,
+            { responseType: 'text' as 'json' }
+          ).pipe(timeout(30000))
+        );
+        console.log('📥 Resposta upload (texto):', res);
+        const parsed = typeof res === 'string' ? JSON.parse(res) : res;
+        if (!parsed?.success) {
+          console.error('Upload devolveu erro:', parsed);
+          allOk = false;
+        }
+      } catch (error: any) {
+        console.error('❌ Erro ao fazer upload de media:', error.status, error.message);
+        if (error.error) console.error('   Corpo da resposta:', error.error);
+        allOk = false;
+      }
+    }
+    return allOk;
   }
 
   async deletePost(postId: number): Promise<any> {
@@ -315,13 +274,9 @@ export class PostService {
       const response: any = await firstValueFrom(
         this.http.delete(`${this.apiUrl}/?route=post&action=eliminar&id=${postId}`, this.getHeaders())
       );
-      
-      if (response.success) {
-        await this.loadPostsFromAPI();
-      }
+
       return response;
     } catch (error: any) {
-      console.error('Erro ao deletar post:', error);
       return { success: false, message: error.error?.message || 'Erro ao deletar publicação' };
     }
   }
@@ -332,18 +287,14 @@ export class PostService {
 
     try {
       const response: any = await firstValueFrom(
-        this.http.post(`${this.apiUrl}/?route=baze&action=like`, 
-          { post_id: postId }, 
+        this.http.post(
+          `${this.apiUrl}/?route=baze&action=like`,
+          { post_id: postId.toString() },
           this.getHeaders()
         )
       );
-      
-      if (response.success) {
-        await this.loadPostsFromAPI();
-      }
       return response;
     } catch (error: any) {
-      console.error('Erro ao dar like:', error);
       return { success: false };
     }
   }
@@ -354,15 +305,13 @@ export class PostService {
 
     try {
       const response: any = await firstValueFrom(
-        this.http.delete(`${this.apiUrl}/?route=baze&action=unlike&post_id=${postId}`, this.getHeaders())
+        this.http.delete(
+          `${this.apiUrl}/?route=baze&action=unlike&post_id=${postId}`,
+          this.getHeaders()
+        )
       );
-      
-      if (response.success) {
-        await this.loadPostsFromAPI();
-      }
       return response;
     } catch (error: any) {
-      console.error('Erro ao remover like:', error);
       return { success: false };
     }
   }
@@ -373,18 +322,14 @@ export class PostService {
 
     try {
       const response: any = await firstValueFrom(
-        this.http.post(`${this.apiUrl}/?route=comment&action=criar`,
-          { post_id: postId, conteudo },
+        this.http.post(
+          `${this.apiUrl}/?route=comment&action=create`,
+          { post_id: postId.toString(), conteudo },
           this.getHeaders()
         )
       );
-      
-      if (response.success) {
-        await this.loadPostsFromAPI();
-      }
       return response;
     } catch (error: any) {
-      console.error('Erro ao adicionar comentário:', error);
       return { success: false };
     }
   }
@@ -395,15 +340,13 @@ export class PostService {
 
     try {
       const response: any = await firstValueFrom(
-        this.http.delete(`${this.apiUrl}/?route=comment&action=eliminar&id=${commentId}`, this.getHeaders())
+        this.http.delete(
+          `${this.apiUrl}/?route=comment&action=delete&id=${commentId}`,
+          this.getHeaders()
+        )
       );
-      
-      if (response.success) {
-        await this.loadPostsFromAPI();
-      }
       return response;
     } catch (error: any) {
-      console.error('Erro ao deletar comentário:', error);
       return { success: false };
     }
   }
@@ -414,12 +357,78 @@ export class PostService {
 
     try {
       const response: any = await firstValueFrom(
-        this.http.post(`${this.apiUrl}/?route=report&action=criar`, reportData, this.getHeaders())
+        this.http.post(
+          `${this.apiUrl}/?route=report&action=create`,
+          reportData,
+          this.getHeaders()
+        )
       );
       return response;
     } catch (error: any) {
-      console.error('Erro ao enviar denúncia:', error);
       return { success: false };
+    }
+  }
+
+  async loadCommentsByPost(postId: number): Promise<Comment[]> {
+    const token = this.auth.getToken();
+    if (!token) return [];
+
+    try {
+      const response: any = await firstValueFrom(
+        this.http.get(
+          `${this.apiUrl}/?route=comment&action=getByPost&post_id=${postId}&page=1&limit=50`,
+          this.getHeaders()
+        )
+      );
+
+      if (response.success && Array.isArray(response.data)) {
+        return this.mapComments(response.data);
+      }
+      return [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getUserPosts(userId: string): Promise<Post[]> {
+    const token = this.auth.getToken();
+    if (!token) return [];
+
+    try {
+      const response: any = await firstValueFrom(
+        this.http.get(
+          `${this.apiUrl}/?route=post&action=meusPosts&page=1&limit=50`,
+          this.getHeaders()
+        )
+      );
+
+      if (response.success && Array.isArray(response.data)) {
+        return response.data.map((p: any) => this.mapPost(p));
+      }
+      return [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async getUserPostsById(userId: string): Promise<Post[]> {
+    const token = this.auth.getToken();
+    if (!token) return [];
+
+    try {
+      const response: any = await firstValueFrom(
+        this.http.get(
+          `${this.apiUrl}/?route=post&action=postsDeUtilizador&user_id=${userId}&page=1&limit=50`,
+          this.getHeaders()
+        )
+      );
+
+      if (response.success && Array.isArray(response.data)) {
+        return response.data.map((p: any) => this.mapPost(p));
+      }
+      return [];
+    } catch (error) {
+      return [];
     }
   }
 
@@ -429,11 +438,11 @@ export class PostService {
       const date = new Date(dateString);
       const now = new Date();
       const diff = now.getTime() - date.getTime();
-      
+
       const minutes = Math.floor(diff / 60000);
       const hours = Math.floor(minutes / 60);
       const days = Math.floor(hours / 24);
-      
+
       if (minutes < 1) return 'agora';
       if (minutes < 60) return `há ${minutes} ${minutes === 1 ? 'min' : 'mins'}`;
       if (hours < 24) return `há ${hours} ${hours === 1 ? 'h' : 'hs'}`;
@@ -456,7 +465,11 @@ export class PostService {
     }
   }
 
-  refreshPosts(): void {
-    this.loadPostsFromAPI();
+  async refreshPosts(): Promise<void> {
+    await this.loadPostsFromAPI();
+  }
+
+  clearPosts(): void {
+    this.postsSubject.next([]);
   }
 }

@@ -33,8 +33,8 @@ export class ExplorarComponent implements OnInit {
     coverImage: '' // ADICIONADO: coverImage
   };
   
-  me = {
-    id: 999,
+  me: { id: string; name: string; handle: string; avatar: string } = {
+    id: '0',
     name: '',
     handle: '',
     avatar: ''
@@ -56,7 +56,7 @@ export class ExplorarComponent implements OnInit {
     if (userData) {
       this.currentUser = userData;
       this.me = {
-        id: 999,
+        id: userData.id || '0',
         name: userData.name,
         handle: userData.handle,
         avatar: userData.avatar

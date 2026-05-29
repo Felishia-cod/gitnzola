@@ -2,6 +2,8 @@ import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 
+const DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E";
+
 @Injectable({
   providedIn: 'root'
 })
@@ -9,57 +11,96 @@ export class Auth {
 
   private apiUrl = 'https://nzolanet-back.onrender.com';
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) {
+    console.log('🔐 Auth service criado');
+  }
+
+  private normalizeUrl(url: string | null | undefined, fallback: string = ''): string {
+    if (!url) return fallback;
+    if (url.includes('localhost')) {
+      return url.replace(/https?:\/\/localhost:\d+\/NzolaNet\/backend/g, this.apiUrl);
+    }
+    if (url.startsWith('/NzolaNet/backend')) {
+      return this.apiUrl + url.replace('/NzolaNet/backend', '');
+    }
+    return url;
+  }
+
+  private mapUser(backend: any): any {
+    if (!backend) {
+      return this.getEmptyUser();
+    }
+    return {
+      id: backend.id?.toString() || Date.now().toString(),
+      name: backend.nome || backend.name || '',
+      email: backend.email || '',
+      handle: backend.handle || `@${backend.username || (backend.nome || backend.name || '').toLowerCase().replace(/\s/g, '')}`,
+      avatar: this.normalizeUrl(backend.foto_perfil || backend.avatar, DEFAULT_AVATAR),
+      bio: backend.bio || '',
+      location: '',
+      joinedDate: backend.criado_em || backend.created_at || new Date().toLocaleDateString('pt-PT'),
+      postsCount: parseInt(backend.postsCount || backend.total_posts || 0),
+      amigosCount: parseInt(backend.amigosCount || backend.following_count || 0),
+      followersCount: parseInt(backend.followersCount || backend.followers_count || 0),
+      privacy: (backend.privacidade === 'privado' || backend.privacy === 'private') ? 'private' : 'public',
+      coverImage: this.normalizeUrl(backend.foto_capa || backend.coverImage || backend.cover_image || ''),
+      is_admin: !!backend.is_admin,
+      username: backend.username || ''
+    };
+  }
+
+  private getEmptyUser() {
+    return {
+      id: Date.now().toString(),
+      name: '',
+      email: '',
+      handle: '',
+      avatar: DEFAULT_AVATAR,
+      bio: '',
+      location: '',
+      joinedDate: new Date().toLocaleDateString('pt-PT'),
+      postsCount: 0,
+      amigosCount: 0,
+      followersCount: 0,
+      privacy: 'public' as const,
+      coverImage: '',
+      is_admin: false,
+      username: ''
+    };
+  }
 
   login(email: string, password: string): Observable<any> {
-    console.log('🔐 Tentando login para:', email);
-    
     const url = `${this.apiUrl}/?route=auth&action=login`;
-    
+    console.log('🔐 A fazer login para:', email);
+
     return this.http.post<any>(url, { email, password }).pipe(
       tap(response => {
-        console.log('📦 Resposta completa do login:', response);
-        
-        if (response.success) {
-          const token = response.token;
-          const user = response.user;
-          
+        console.log('📦 Resposta do login (tap):', JSON.stringify(response).substring(0, 300));
+
+        if (response?.success) {
+          const data = response.data || response;
+          const token = data.token || response.token;
+          const user = data.user || response.user || data;
+
+          console.log('🔑 Token encontrado:', !!token);
+          console.log('👤 User encontrado:', !!user);
+
           if (token) {
             localStorage.setItem('token', token);
             console.log('✅ Token salvo no localStorage');
           } else {
-            console.error('❌ Token não encontrado');
+            console.error('❌ Token não encontrado na resposta');
           }
-          
-          if (user) {
-            // CORREÇÃO: Garantir que todos os campos necessários existam
-            const userData: any = {
-              id: user.id?.toString() || user.user_id?.toString() || Date.now().toString(),
-              name: user.name || user.username || email.split('@')[0],
-              email: user.email || email,
-              handle: user.handle || `@${(user.name || email.split('@')[0]).toLowerCase().replace(/\s/g, '')}`,
-              avatar: user.avatar || user.profile_picture || 'https://i.pravatar.cc/150?img=' + Math.floor(Math.random() * 70),
-              bio: user.bio || user.biography || '',
-              location: user.location || user.city || '',
-              joinedDate: user.created_at || user.joinedDate || new Date().toLocaleDateString('pt-PT'),
-              postsCount: user.postsCount || user.total_posts || 0,
-              amigosCount: user.amigosCount || user.following_count || 0,
-              followersCount: user.followersCount || user.followers_count || 0,
-              privacy: user.privacy || user.profile_privacy || 'public',
-              coverImage: user.coverImage || user.cover_image || '',
-              isAdmin: user.is_admin === true || user.isAdmin === true || user.is_admin === 1,
-              is_admin: user.is_admin === true || user.isAdmin === true || user.is_admin === 1
-            };
 
+          if (user) {
+            const userData = this.mapUser(user);
             localStorage.setItem('user', JSON.stringify(userData));
             console.log('✅ User salvo no localStorage:', userData.name);
-            console.log('✅ User ID:', userData.id);
-            console.log('✅ User admin flag:', userData.is_admin);
           } else {
             console.error('❌ User não encontrado na resposta');
           }
         } else {
-          console.error('❌ Login falhou:', response.message);
+          console.error('❌ Login failed:', response?.message);
         }
       })
     );
@@ -69,26 +110,12 @@ export class Auth {
     const url = `${this.apiUrl}/?route=auth&action=registar`;
     return this.http.post<any>(url, data).pipe(
       tap(response => {
-        console.log('📦 Resposta do registro:', response);
-        if (response.success && response.token) {
-          localStorage.setItem('token', response.token);
-          if (response.user) {
-            const userData = {
-              id: response.user.id?.toString() || Date.now().toString(),
-              name: response.user.name || data.name,
-              email: response.user.email || data.email,
-              handle: response.user.handle || `@${(data.name || '').toLowerCase().replace(/\s/g, '')}`,
-              avatar: response.user.avatar || 'https://i.pravatar.cc/150?img=' + Math.floor(Math.random() * 70),
-              bio: response.user.bio || '',
-              location: response.user.location || '',
-              joinedDate: new Date().toLocaleDateString('pt-PT'),
-              postsCount: 0,
-              amigosCount: 0,
-              followersCount: 0,
-              privacy: 'public',
-              coverImage: ''
-            };
-            localStorage.setItem('user', JSON.stringify(userData));
+        console.log('📦 Resposta do registo:', JSON.stringify(response).substring(0, 200));
+        if (response?.success) {
+          const userData = response.data || response.user;
+          if (userData) {
+            const mapped = this.mapUser(userData);
+            localStorage.setItem('user', JSON.stringify(mapped));
           }
         }
       })
@@ -108,20 +135,21 @@ export class Auth {
   alterarSenha(passwordAtual: string, novaPassword: string): Observable<any> {
     const token = this.getToken();
     const url = `${this.apiUrl}/?route=user&action=alterarPassword`;
-    
+
     const headers = new HttpHeaders({
       'Authorization': `Bearer ${token}`
     });
-    
+
     return this.http.post<any>(
-      url, 
+      url,
       { password_atual: passwordAtual, password_nova: novaPassword },
       { headers }
     );
   }
 
   getToken(): string | null {
-    return localStorage.getItem('token');
+    const token = localStorage.getItem('token');
+    return token;
   }
 
   getUser(): any {
@@ -129,15 +157,13 @@ export class Auth {
     if (userStr) {
       try {
         const user = JSON.parse(userStr);
-        // CORREÇÃO: Verificar se o user tem ID
         if (!user.id) {
-          console.warn('⚠️ User sem ID no localStorage');
           user.id = Date.now().toString();
           localStorage.setItem('user', JSON.stringify(user));
         }
         return user;
       } catch (e) {
-        console.error('❌ Erro ao parsear user do localStorage:', e);
+        console.error('❌ Erro ao parsear user do localStorage');
         return null;
       }
     }
@@ -152,28 +178,30 @@ export class Auth {
   isAuthenticated(): boolean {
     const token = this.getToken();
     const user = this.getUser();
-    const isValid = token !== null && token.length > 0 && user !== null;
-    
+    const isValid = !!token && token.length > 0 && !!user;
+
     if (!isValid && token) {
-      // Se tem token mas não tem user, limpar
       this.logout();
     }
-    
+
     return isValid;
   }
 
-  // CORREÇÃO: Método para atualizar os dados do usuário no localStorage
   updateUserData(updates: Partial<any>): void {
     const currentUser = this.getUser();
     if (currentUser) {
       const updatedUser = { ...currentUser, ...updates };
       localStorage.setItem('user', JSON.stringify(updatedUser));
-      console.log('📦 User atualizado no localStorage:', updatedUser.name);
     }
   }
 
   logout(): void {
-    console.log('🚪 Fazendo logout...');
+    const token = this.getToken();
+    if (token) {
+      this.http.post(`${this.apiUrl}/?route=auth&action=logout`, {}).subscribe({
+        error: () => {}
+      });
+    }
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     localStorage.removeItem('userCoverImage');
@@ -181,8 +209,10 @@ export class Auth {
     localStorage.removeItem('followingUsers');
     localStorage.removeItem('followersUsers');
     localStorage.removeItem('savedPostsIds');
-    // Limpar também outros itens que podem estar causando conflitos
     localStorage.removeItem('currentUser');
-    console.log('✅ Logout completo');
+    localStorage.removeItem('friends');
+    localStorage.removeItem('incomingRequests');
+    localStorage.removeItem('outgoingRequests');
+    localStorage.removeItem('savedPosts');
   }
 }

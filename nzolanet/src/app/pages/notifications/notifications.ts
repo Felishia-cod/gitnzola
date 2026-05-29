@@ -1,14 +1,9 @@
-import { Component } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-
-interface FriendRequest {
-  id: string;
-  userId: string;
-  name: string;
-  handle: string;
-  avatar: string;
-}
+import { Subscription } from 'rxjs';
+import { NotificationService, NotificationDTO } from '../../services/notification';
+import { FollowService, FollowDTO } from '../../services/follow';
 
 interface Activity {
   id: number;
@@ -29,84 +24,121 @@ interface Activity {
   templateUrl: './notifications.html',
   styleUrls: ['./notifications.scss']
 })
-export class NotificationsComponent {
-  // Pedidos de amizade recebidos
-  incomingRequests: FriendRequest[] = [
-    {
-      id: '1',
-      userId: 'u4',
-      name: 'Mbala João',
-      handle: '@mbala',
-      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100'
-    },
-    {
-      id: '2',
-      userId: 'u5',
-      name: 'Sumbe Costa',
-      handle: '@sumbe',
-      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100'
-    }
-  ];
+export class NotificationsComponent implements OnInit, OnDestroy {
+  incomingRequests: any[] = [];
+  recentActivities: Activity[] = [];
+  isLoading = true;
+  private notifSub: Subscription | null = null;
 
-  // Atividades recentes
-  recentActivities: Activity[] = [
-    {
-      id: 1,
-      type: 'baze',
-      userName: 'Nzinga Domingos',
-      userHandle: '@nzinga',
-      userAvatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100',
-      action: 'deu baze ao teu post',
-      postId: 1,
-      time: 'há 5 min'
-    },
-    {
-      id: 2,
-      type: 'comment',
-      userName: 'Kiala Bento',
-      userHandle: '@kiala_b',
-      userAvatar: 'https://images.unsplash.com/photo-1527980965255-d3b416303d12?w=100',
-      action: 'comentou',
-      comment: 'Top demais! 🔥',
-      postId: 2,
-      time: 'há 1 hora'
-    },
-    {
-      id: 3,
-      type: 'follow',
-      userName: 'Lukeni Afonso',
-      userHandle: '@lukeni',
-      userAvatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=100',
-      action: 'começou a seguir-te',
-      time: 'há 3 horas'
-    }
-  ];
+  constructor(
+    private notificationService: NotificationService,
+    private followService: FollowService
+  ) {}
 
-  acceptRequest(requestId: string) {
-    // Remove o pedido da lista
-    const acceptedRequest = this.incomingRequests.find(r => r.id === requestId);
-    
-    this.incomingRequests = this.incomingRequests.filter(r => r.id !== requestId);
-    
-    // Adiciona uma atividade de que seguiu de volta
-    if (acceptedRequest) {
-      const newActivity: Activity = {
-        id: Date.now(),
-        type: 'follow',
-        userName: 'Você',
-        userHandle: '@voce',
-        userAvatar: '',
-        action: `começou a seguir ${acceptedRequest.name}`,
-        time: 'agora'
-      };
-      this.recentActivities = [newActivity, ...this.recentActivities];
-    }
-    
-    console.log('Pedido aceito:', requestId);
+  ngOnInit() {
+    this.loadData();
   }
 
-  rejectRequest(requestId: string) {
-    this.incomingRequests = this.incomingRequests.filter(r => r.id !== requestId);
-    console.log('Pedido rejeitado:', requestId);
+  ngOnDestroy() {
+    if (this.notifSub) this.notifSub.unsubscribe();
+  }
+
+  private async loadData() {
+    this.isLoading = true;
+
+    await Promise.all([
+      this.loadNotifications(),
+      this.loadPedidosPendentes()
+    ]);
+
+    this.isLoading = false;
+  }
+
+  private async loadNotifications() {
+    await this.notificationService.loadNotifications();
+    const apiNotifs = this.notificationService.getNotifications();
+
+    this.recentActivities = apiNotifs.map((n: NotificationDTO) => ({
+      id: parseInt(n.id || '0'),
+      type: this.mapTipo(n.tipo),
+      userName: n.remetente_nome || 'Alguém',
+      userHandle: n.remetente_username ? `@${n.remetente_username}` : '@user',
+      userAvatar: n.remetente_foto_perfil || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E",
+      action: this.mapAction(n.tipo),
+      postId: n.referencia_id ? parseInt(n.referencia_id) : undefined,
+      time: this.formatTime(n.criado_em)
+    }));
+  }
+
+  private async loadPedidosPendentes() {
+    const pedidos = await this.followService.getPedidosPendentes();
+
+    this.incomingRequests = pedidos.map((p: FollowDTO) => ({
+      id: p.id,
+      userId: p.seguidor_id,
+      name: p.seguidor_nome || 'Alguém',
+      handle: p.seguidor_username ? `@${p.seguidor_username}` : '@user',
+      avatar: p.seguidor_foto_perfil || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E"
+    }));
+  }
+
+  private mapTipo(tipo: string): 'baze' | 'comment' | 'follow' {
+    if (tipo === 'baze') return 'baze';
+    if (tipo === 'comment' || tipo === 'comentario') return 'comment';
+    return 'follow';
+  }
+
+  private mapAction(tipo: string): string {
+    switch (tipo) {
+      case 'baze': return 'deu baze ao teu post';
+      case 'comment':
+      case 'comentario': return 'comentou';
+      case 'follow': return 'começou a seguir-te';
+      default: return 'interagiu contigo';
+    }
+  }
+
+  async acceptRequest(requestId: string) {
+    const request = this.incomingRequests.find(r => r.id === requestId);
+    if (!request) return;
+
+    const result = await this.followService.aceitar(request.userId);
+    if (result.success) {
+      this.incomingRequests = this.incomingRequests.filter(r => r.id !== requestId);
+      await this.loadNotifications();
+    }
+  }
+
+  async rejectRequest(requestId: string) {
+    const request = this.incomingRequests.find(r => r.id === requestId);
+    if (!request) return;
+
+    const result = await this.followService.rejeitar(request.userId);
+    if (result.success) {
+      this.incomingRequests = this.incomingRequests.filter(r => r.id !== requestId);
+    }
+  }
+
+  refresh() {
+    this.loadData();
+  }
+
+  private formatTime(dateString: string): string {
+    if (!dateString) return 'agora';
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      const diff = now.getTime() - date.getTime();
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+
+      if (minutes < 1) return 'agora';
+      if (minutes < 60) return `há ${minutes} ${minutes === 1 ? 'min' : 'mins'}`;
+      if (hours < 24) return `há ${hours} ${hours === 1 ? 'h' : 'hs'}`;
+      return `há ${days} ${days === 1 ? 'dia' : 'dias'}`;
+    } catch (e) {
+      return 'agora';
+    }
   }
 }

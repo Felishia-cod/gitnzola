@@ -883,3 +883,128 @@ $nzola-primary-rgb: 255, 122, 0;
   max-height: 300px;
   border-radius: 0.75rem;
 }
+
+// MODAL EXTRA LARGE
+.modal-xlarge {
+  max-width: 650px;
+  width: 90%;
+}
+
+// PERFIL MODAL
+.profile-modal-bio {
+  font-size: 0.8rem;
+  color: var(--muted-foreground);
+  margin-bottom: 1rem;
+}
+
+.profile-modal-stats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.75rem;
+}
+
+.stat-item {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: background 0.2s;
+  font-size: 0.75rem;
+}
+
+.stat-item:hover {
+  background: var(--muted);
+}
+
+.stat-item.active {
+  background: var(--muted);
+  color: var(--primary);
+}
+
+.stat-item strong {
+  font-size: 1rem;
+}
+
+.profile-tab-content {
+  max-height: 350px;
+  overflow-y: auto;
+}
+
+.profile-posts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.profile-post-item {
+  background: var(--muted);
+  border-radius: 0.5rem;
+  padding: 0.75rem;
+}
+
+.profile-post-text {
+  font-size: 0.8rem;
+  margin-bottom: 0.5rem;
+}
+
+.profile-post-image img,
+.profile-post-video video {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.profile-post-stats {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.7rem;
+  color: var(--muted-foreground);
+}
+
+.profile-post-stats .post-time {
+  margin-left: auto;
+}
+
+.user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.user-list-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+}
+
+.user-list-item:hover {
+  background: var(--muted);
+}
+
+.user-list-avatar {
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  object-fit: cover;
+}
+
+.user-list-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.user-list-info strong {
+  font-size: 0.8rem;
+}
+
+.user-list-info span {
+  font-size: 0.65rem;
+  color: var(--muted-foreground);
+}

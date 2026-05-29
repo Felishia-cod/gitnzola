@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { UserService, UserData } from '../../services/user';
 import { PostService, Post, Comment } from '../../services/post';
 import { Auth } from '../../services/auth';
@@ -48,6 +48,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
   modalUsers: User[] = [];
   searchQuery: string = '';
   showEditModal: boolean = false;
+
+  isOwnProfile: boolean = true;
+  viewedUserId: string | null = null;
+  viewedUser: UserData | null = null;
   
   editForm = {
     name: '',
@@ -70,6 +74,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     private postService: PostService,
     private auth: Auth,
     private router: Router,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -87,54 +92,86 @@ export class ProfileComponent implements OnInit, OnDestroy {
       return;
     }
 
-    // 1. Primeiro, verificar se já tem usuário em cache
-    const cachedUser = this.userService.getCurrentUser();
-    if (cachedUser) {
-      console.log('📦 Usuário do cache:', cachedUser.name);
-      this.setCurrentUser(cachedUser);
+    // Verificar se há um ID na rota (visualizando outro perfil)
+    const profileId = this.route.snapshot.paramMap.get('id');
+    const currentUserData = this.userService.getCurrentUser();
+
+    if (profileId && currentUserData?.id !== profileId) {
+      // Visualizando perfil de outro usuário
+      this.isOwnProfile = false;
+      this.viewedUserId = profileId;
+      await this.loadOtherUserProfile(profileId);
+    } else {
+      this.isOwnProfile = true;
+
+      // 1. Primeiro, verificar se já tem usuário em cache
+      if (currentUserData) {
+        console.log('📦 Usuário do cache:', currentUserData.name);
+        this.setCurrentUser(currentUserData);
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }
+
+      // 2. Subscrever para futuras atualizações
+      this.userSubscription = this.userService.userData$.subscribe(user => {
+        if (user) {
+          console.log('📢 Atualização do UserService:', user.name);
+          this.setCurrentUser(user);
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }
+      });
+
+      // 3. Carregar perfil do backend (se necessário)
+      if (!currentUserData) {
+        console.log('🔄 Carregando perfil do backend...');
+        await this.userService.loadUserProfile();
+      }
+
+      // 4. Timeout de segurança
+      setTimeout(() => {
+        if (!this.currentUser && !this.errorMessage) {
+          console.error('❌ Timeout: perfil não carregado');
+          this.errorMessage = 'Erro ao carregar perfil. Tente novamente.';
+          this.isLoading = false;
+          this.cdr.detectChanges();
+        }
+      }, 8000);
+
+      // 5. Carregar posts
+      this.postsSubscription = this.postService.posts$.subscribe(posts => {
+        if (this.currentUser?.id) {
+          this.userPosts = posts.filter(p => p.userId === this.currentUser!.id && !p.eliminado);
+          if (this.currentUser) {
+            this.currentUser.postsCount = this.userPosts.length;
+          }
+          this.cdr.detectChanges();
+        }
+      });
+    }
+  }
+
+  private async loadOtherUserProfile(userId: string) {
+    const userData = await this.userService.loadUserProfileById(userId);
+    if (userData) {
+      this.viewedUser = userData;
+      this.currentUser = userData;
+      this.privacyStatus = userData.privacy;
+      this.isLoading = false;
+      this.cdr.detectChanges();
+
+      // Carregar posts deste usuário
+      const posts = await this.postService.getUserPostsById(userId);
+      this.userPosts = posts.filter(p => !p.eliminado);
+      if (this.viewedUser) {
+        this.viewedUser.postsCount = this.userPosts.length;
+      }
+      this.cdr.detectChanges();
+    } else {
+      this.errorMessage = 'Utilizador não encontrado.';
       this.isLoading = false;
       this.cdr.detectChanges();
     }
-
-    // 2. Subscrever para futuras atualizações
-    this.userSubscription = this.userService.userData$.subscribe(user => {
-      if (user) {
-        console.log('📢 Atualização do UserService:', user.name);
-        this.setCurrentUser(user);
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      }
-    });
-
-    // 3. Carregar perfil do backend (se necessário)
-    if (!cachedUser) {
-      console.log('🔄 Carregando perfil do backend...');
-      await this.userService.loadUserProfile();
-    }
-
-    // 4. Timeout de segurança
-    setTimeout(() => {
-      if (!this.currentUser && !this.errorMessage) {
-        console.error('❌ Timeout: perfil não carregado');
-        this.errorMessage = 'Erro ao carregar perfil. Tente novamente.';
-        this.isLoading = false;
-        this.cdr.detectChanges();
-      }
-    }, 8000);
-
-    // 5. Carregar posts
-    this.postsSubscription = this.postService.posts$.subscribe(posts => {
-      if (this.currentUser?.id) {
-        const userIdNum = typeof this.currentUser.id === 'string' 
-          ? parseInt(this.currentUser.id) 
-          : this.currentUser.id;
-        this.userPosts = posts.filter(p => p.userId === userIdNum && !p.eliminado);
-        if (this.currentUser) {
-          this.currentUser.postsCount = this.userPosts.length;
-        }
-        this.cdr.detectChanges();
-      }
-    });
   }
 
   private setCurrentUser(user: UserData) {
@@ -182,7 +219,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     
     const newComment: Comment = {
       id: Date.now(),
-      userId: this.currentUser.id ? parseInt(this.currentUser.id) : 999,
+      userId: this.currentUser.id ? this.currentUser.id : '999',
       userName: this.currentUser.name,
       userHandle: this.currentUser.handle,
       userAvatar: this.currentUser.avatar,
@@ -208,7 +245,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     if (!this.selectedPost) return;
     const comment = this.findCommentInPost(this.selectedPost.comments, commentId);
     if (comment) {
-      if (comment.userId === (this.currentUser?.id ? parseInt(this.currentUser.id) : 999)) {
+      if (comment.userId === (this.currentUser?.id || '999')) {
         return;
       }
       if (!comment.likedByUser) {
@@ -366,6 +403,21 @@ export class ProfileComponent implements OnInit, OnDestroy {
     input.click();
   }
 
+  async removeAvatar() {
+    if (!confirm('Tens a certeza que queres remover a foto de perfil?')) return;
+    const defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E";
+    this.editForm.avatar = defaultAvatar;
+    if (this.currentUser) {
+      this.currentUser.avatar = defaultAvatar;
+    }
+    await this.userService.removeAvatar();
+    alert('Foto de perfil removida.');
+  }
+
+  goBack() {
+    this.router.navigate(['/feed']);
+  }
+
   followBack(userId: string) {
     console.log('Seguir de volta:', userId);
   }
@@ -414,13 +466,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('savedPosts');
-    localStorage.removeItem('userCoverImage');
-    localStorage.removeItem('privacySettings');
-    localStorage.removeItem('followingUsers');
-    localStorage.removeItem('followersUsers');
-    localStorage.removeItem('savedPostsIds');
-    this.router.navigate(['/login']);
+    this.userService.clearUser();
+    this.postService.clearPosts();
+    this.auth.logout();
+    window.location.href = '/login';
   }
 }

@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { UserService, UserData } from '../../services/user';
+import { Auth } from '../../services/auth';
 
 interface PrivacySettings {
   profileVisibility: 'publico' | 'privado';
@@ -33,7 +34,8 @@ export class SettingsComponent implements OnInit {
 
   constructor(
     private router: Router,
-    private userService: UserService
+    private userService: UserService,
+    private auth: Auth
   ) {}
 
   ngOnInit() {
@@ -62,16 +64,16 @@ export class SettingsComponent implements OnInit {
     }
   }
 
-  updatePrivacy() {
+  async updatePrivacy() {
     localStorage.setItem('privacySettings', JSON.stringify(this.privacy));
-    
+
     const userData = this.userService.getCurrentUser();
     if (userData) {
-      this.userService.updateUserData({
-        privacy: this.privacy.profileVisibility === 'publico' ? 'public' : 'private'
-      });
+      const privacy = this.privacy.profileVisibility === 'publico' ? 'public' : 'private';
+      this.userService.updateUserData({ privacy });
+      await this.userService.updateProfile({ privacy });
     }
-    
+
     console.log('Configurações guardadas:', this.privacy);
   }
 
@@ -104,16 +106,7 @@ export class SettingsComponent implements OnInit {
   }
 
   logout() {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    localStorage.removeItem('savedPosts');
-    localStorage.removeItem('privacySettings');
-    localStorage.removeItem('followingUsers');
-    localStorage.removeItem('friends');
-    localStorage.removeItem('incomingRequests');
-    localStorage.removeItem('outgoingRequests');
-    localStorage.removeItem('userCoverImage');
-    localStorage.removeItem('savedPostsIds');
+    this.auth.logout();
     this.router.navigate(['/login']);
   }
 }

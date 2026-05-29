@@ -1,10 +1,11 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { UserService, UserData } from '../../services/user';
 import { PostService, Post, Comment } from '../../services/post';
+import { FollowService } from '../../services/follow';
 
 @Component({
   selector: 'app-home',
@@ -25,6 +26,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   showEmojiPicker: boolean = false;
   showColorPickerForNewPost: boolean = false;
   savedPosts: Post[] = [];
+  isPublishing: boolean = false; // Estado de loading para o botão publicar
   
   showReportModal: boolean = false;
   reportTargetType: 'post' | 'comment' = 'post';
@@ -59,8 +61,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     privacy: 'public'
   };
 
-  me = {
-    id: 0,
+  me: { id: string; name: string; handle: string; avatar: string } = {
+    id: '0',
     name: '',
     handle: '',
     avatar: ''
@@ -86,7 +88,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     { tag: '#Luanda', count: '3,9K posts' }
   ];
   
-  // REMOVIDO: allAvailableUsers mockado - usar dados reais do backend
   followingUsers: number[] = [];
   followersUsers: number[] = [];
   suggestions: any[] = [];
@@ -97,16 +98,29 @@ export class HomeComponent implements OnInit, OnDestroy {
   constructor(
     private userService: UserService,
     private postService: PostService,
-    private router: Router
+    private followService: FollowService,
+    private router: Router,
+    private cdr: ChangeDetectorRef
   ) {}
 
   ngOnInit() {
+    // Redirecionar admin para /admin
+    const currentUserData = this.userService.getCurrentUser();
+    if (currentUserData?.is_admin) {
+      this.router.navigate(['/admin']);
+      return;
+    }
+
     // Carregar dados do usuário logado
     this.userSubscription = this.userService.userData$.subscribe((userData: UserData | null) => {
       if (userData) {
+        if (userData.is_admin) {
+          this.router.navigate(['/admin']);
+          return;
+        }
         this.currentUser = userData;
         this.me = {
-          id: parseInt(userData.id || '0'),
+          id: userData.id || '0',
           name: userData.name,
           handle: userData.handle,
           avatar: userData.avatar || this.getDefaultAvatar()
@@ -118,10 +132,12 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.loadFollowingUsers();
     this.loadFollowersUsers();
 
+    // Forçar carregamento de posts
+    this.postService.refreshPosts();
+
     // Inscrever para atualizações de posts
     this.postsSubscription = this.postService.posts$.subscribe((posts: Post[]) => {
       console.log('📢 Posts atualizados no feed:', posts.length);
-      // Usar os posts diretamente do serviço, sem filtrar por allAvailableUsers
       this.filteredPosts = [...posts].sort((a, b) => b.id - a.id);
       this.loadSavedPosts();
     });
@@ -143,9 +159,8 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
-  // Avatar padrão fixo (não muda a cada refresh)
   private getDefaultAvatar(): string {
-    return 'https://i.pravatar.cc/150?img=1';
+    return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E";
   }
   
   private updatePostTimes() {
@@ -205,27 +220,36 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
   
   private loadSuggestions() {
-    // Sugestões vazias por enquanto - serão carregadas do backend depois
     this.suggestions = [];
   }
   
-  sendFriendRequest(userId: number) {
+  async sendFriendRequest(userId: number) {
     if (this.followingUsers.includes(userId)) {
       this.showAlert('Aviso', 'Você já segue este usuário!', 'warning');
       return;
     }
-    
-    this.followingUsers.push(userId);
-    this.saveFollowingUsers();
-    this.showAlert('Sucesso', 'Pedido enviado!', 'success');
-    this.loadSuggestions();
+
+    const result = await this.followService.follow(userId.toString());
+    if (result.success) {
+      this.followingUsers.push(userId);
+      this.saveFollowingUsers();
+      this.showAlert('Sucesso', 'Pedido enviado!', 'success');
+      this.loadSuggestions();
+    } else {
+      this.showAlert('Erro', result.message || 'Erro ao enviar pedido', 'error');
+    }
   }
-  
-  acceptFriendRequest(userId: number) {
-    if (!this.followersUsers.includes(userId)) {
-      this.followersUsers.push(userId);
-      this.saveFollowersUsers();
+
+  async acceptFriendRequest(userId: number) {
+    const result = await this.followService.aceitar(userId.toString());
+    if (result.success) {
+      if (!this.followersUsers.includes(userId)) {
+        this.followersUsers.push(userId);
+        this.saveFollowersUsers();
+      }
       this.showAlert('Sucesso', 'Amizade aceita!', 'success');
+    } else {
+      this.showAlert('Erro', 'Erro ao aceitar pedido', 'error');
     }
   }
   
@@ -340,6 +364,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.showConfirm('Eliminar Publicação', 'Tem certeza que deseja eliminar esta publicação?', async () => {
       const result = await this.postService.deletePost(postId);
       if (result?.success) {
+        this.filteredPosts = this.filteredPosts.filter(p => p.id !== postId);
         this.savedPosts = this.savedPosts.filter(p => p.id !== postId);
         this.saveToLocalStorage();
         this.showAlert('Sucesso', 'Publicação eliminada com sucesso!', 'success');
@@ -438,45 +463,68 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.selectedVideoFile = null;
   }
 
+  // MÉTODO PUBLISH MELHORADO
   async publish() {
+    // Validar se tem conteúdo
     if (!this.composer.trim() && !this.selectedImageFile && !this.selectedVideoFile) {
       this.showAlert('Erro', 'Adicione um texto, imagem ou vídeo para publicar.', 'error');
       return;
     }
     
+    // Validar se não está tentando enviar imagem e vídeo juntos
     if (this.selectedImageFile && this.selectedVideoFile) {
       this.showAlert('Erro', 'Escolha apenas imagem OU vídeo, não ambos.', 'error');
       return;
     }
     
-    const mediaFiles: File[] = [];
-    if (this.selectedImageFile) {
-      mediaFiles.push(this.selectedImageFile);
-    }
-    if (this.selectedVideoFile) {
-      mediaFiles.push(this.selectedVideoFile);
+    // Prevenir múltiplos envios
+    if (this.isPublishing) {
+      console.log('⏳ Já está publicando...');
+      return;
     }
     
-    const result = await this.postService.addPost({
-      conteudo: this.composer || '',
-      media: mediaFiles.length > 0 ? mediaFiles : undefined
-    });
-    
-    if (result?.success) {
-      this.composer = '';
-      this.selectedImage = null;
-      this.selectedVideo = null;
-      this.selectedImageFile = null;
-      this.selectedVideoFile = null;
-      this.selectedPostColor = '';
-      this.showColorPickerForNewPost = false;
-      this.showAlert('Sucesso', 'Publicação criada com sucesso!', 'success');
-      // Forçar recarregamento imediato
-      setTimeout(() => {
-        this.postService.refreshPosts();
-      }, 500);
-    } else {
-      this.showAlert('Erro', result?.message || 'Erro ao criar publicação', 'error');
+    this.isPublishing = true;
+
+    try {
+      const mediaFiles: File[] = [];
+      if (this.selectedImageFile) {
+        mediaFiles.push(this.selectedImageFile);
+      }
+      if (this.selectedVideoFile) {
+        mediaFiles.push(this.selectedVideoFile);
+      }
+      
+      console.log('📤 Publicando post:', {
+        conteudo: this.composer,
+        mediaCount: mediaFiles.length
+      });
+
+      const result = await this.postService.addPost({
+        conteudo: this.composer || '',
+        media: mediaFiles.length > 0 ? mediaFiles : undefined,
+        backgroundColor: this.selectedPostColor || undefined
+      });
+      
+      if (result?.success) {
+        this.composer = '';
+        this.selectedImage = null;
+        this.selectedVideo = null;
+        this.selectedImageFile = null;
+        this.selectedVideoFile = null;
+        this.selectedPostColor = '';
+        this.showColorPickerForNewPost = false;
+
+        this.showAlert('Sucesso', 'Publicação criada com sucesso!', 'success');
+        console.log('✅ Post publicado e feed atualizado');
+      } else {
+        this.showAlert('Erro', result?.message || 'Erro ao criar publicação', 'error');
+      }
+    } catch (error) {
+      console.error('❌ Erro ao publicar:', error);
+      this.showAlert('Erro', 'Ocorreu um erro ao publicar. Tente novamente.', 'error');
+    } finally {
+      this.isPublishing = false;
+      this.cdr.detectChanges();
     }
   }
 
@@ -489,22 +537,28 @@ export class HomeComponent implements OnInit, OnDestroy {
       return;
     }
     
-    let result;
-    if (post.liked) {
-      result = await this.postService.unlikePost(postId);
-    } else {
-      result = await this.postService.likePost(postId);
-    }
-    
+    const wasLiked = post.liked;
+    post.liked = !post.liked;
+    post.bazes += post.liked ? 1 : -1;
+
+    const result = post.liked
+      ? await this.postService.likePost(postId)
+      : await this.postService.unlikePost(postId);
+
     if (result?.success === false) {
+      post.liked = wasLiked;
+      post.bazes += wasLiked ? 1 : -1;
       this.showAlert('Erro', result?.message || 'Erro ao processar baze', 'error');
     }
   }
 
-  toggleComments(postId: number) {
+  async toggleComments(postId: number) {
     const post = this.filteredPosts.find(p => p.id === postId);
     if (post) {
       post.showComments = !post.showComments;
+      if (post.showComments && post.comments.length === 0) {
+        post.comments = await this.postService.loadCommentsByPost(postId);
+      }
     }
   }
 
@@ -514,6 +568,8 @@ export class HomeComponent implements OnInit, OnDestroy {
       const result = await this.postService.addComment(postId, post.newCommentText);
       if (result?.success) {
         post.newCommentText = '';
+        post.comments = await this.postService.loadCommentsByPost(postId);
+        post.commentsCount = post.comments.length;
       } else {
         this.showAlert('Erro', result?.message || 'Erro ao adicionar comentário', 'error');
       }
@@ -563,11 +619,28 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.showConfirm('Eliminar Comentário', 'Tem certeza que deseja eliminar este comentário?', async () => {
       const result = await this.postService.deleteComment(commentId);
       if (result?.success) {
+        const post = this.filteredPosts.find(p => p.id === postId);
+        if (post) {
+          post.comments = await this.postService.loadCommentsByPost(postId);
+          post.commentsCount = post.comments.length;
+        }
         this.showAlert('Sucesso', 'Comentário eliminado com sucesso!', 'success');
       } else {
         this.showAlert('Erro', result?.message || 'Erro ao eliminar comentário', 'error');
       }
     });
+  }
+
+  isOwnComment(comment: Comment): boolean {
+    return comment.userId === this.me.id;
+  }
+
+  isOwnReply(reply: Comment): boolean {
+    return reply.userId === this.me.id;
+  }
+
+  isOwnPost(post: Post): boolean {
+    return post.userId === this.me.id;
   }
 
   getPostBodyStyle(post: Post) {

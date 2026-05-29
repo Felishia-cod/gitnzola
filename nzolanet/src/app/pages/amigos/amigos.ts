@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { UserService, UserData } from '../../services/user';
 import { Auth } from '../../services/auth';
 
@@ -23,6 +24,17 @@ interface User {
 })
 export class AmigosComponent implements OnInit {
   private apiUrl = 'https://nzolanet-back.onrender.com';
+
+  private normalizeUrl(url: string | null | undefined, fallback: string = ''): string {
+    if (!url) return fallback;
+    if (url.includes('localhost')) {
+      return url.replace(/https?:\/\/localhost:\d+\/NzolaNet\/backend/g, this.apiUrl);
+    }
+    if (url.startsWith('/NzolaNet/backend')) {
+      return this.apiUrl + url.replace('/NzolaNet/backend', '');
+    }
+    return url;
+  }
   
   users: User[] = [];           // Usuários da BD
   friends: string[] = [];       // IDs dos amigos
@@ -46,7 +58,8 @@ export class AmigosComponent implements OnInit {
   constructor(
     private userService: UserService,
     private auth: Auth,
-    private http: HttpClient
+    private http: HttpClient,
+    private router: Router
   ) {}
 
   ngOnInit() {
@@ -113,7 +126,7 @@ export class AmigosComponent implements OnInit {
           id: user.id?.toString() || '',
           name: user.name || user.username || '',
           handle: user.handle || `@${(user.name || '').toLowerCase().replace(/\s/g, '')}`,
-          avatar: user.avatar || 'https://i.pravatar.cc/150?img=1',
+          avatar: this.normalizeUrl(user.avatar || user.foto_perfil, "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E"),
           bio: user.bio || '',
           privacy: user.privacy === 'private' ? 'private' : 'public'
         }));
@@ -165,7 +178,7 @@ export class AmigosComponent implements OnInit {
           id: user.id?.toString() || '',
           name: user.name || user.username || '',
           handle: user.handle || `@${(user.name || '').toLowerCase().replace(/\s/g, '')}`,
-          avatar: user.avatar || 'https://i.pravatar.cc/150?img=1',
+          avatar: this.normalizeUrl(user.avatar || user.foto_perfil, "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E"),
           bio: user.bio || '',
           privacy: user.privacy === 'private' ? 'private' : 'public'
         }));
@@ -330,6 +343,10 @@ export class AmigosComponent implements OnInit {
     return 'Adicionar';
   }
   
+  viewProfile(userId: string) {
+    this.router.navigate(['/feed/perfil', userId]);
+  }
+
   showPendingStatus(userId: string): boolean {
     return this.outgoingRequests.includes(userId);
   }

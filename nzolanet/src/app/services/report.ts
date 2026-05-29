@@ -1,64 +1,126 @@
-
-// src/app/services/report.service.ts
 import { Injectable } from '@angular/core';
-import { BehaviorSubject } from 'rxjs';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { BehaviorSubject, firstValueFrom } from 'rxjs';
+import { Auth } from './auth';
 
-export interface Report {
+export interface ReportDTO {
   id: string;
   reporter_id: string;
-  reporter_name: string;
-  referencia_tipo: 'post' | 'comment';
-  referencia_id: number;
+  referencia_id: string;
+  referencia_tipo: string;
   motivo: string;
-  descricao: string;
-  status: 'pendente' | 'resolvido' | 'ignorado';
+  descricao?: string;
+  status: string;
+  resolvido_por?: string;
   criado_em: string;
-  alvo_nome?: string;
-  alvo_conteudo?: string;
+  resolvido_em?: string;
+  reporter_nome?: string;
+  reporter_username?: string;
 }
 
-@Injectable({
-  providedIn: 'root'
-})
+@Injectable({ providedIn: 'root' })
 export class ReportService {
-  private reportsSubject = new BehaviorSubject<Report[]>([]);
-  reports$ = this.reportsSubject.asObservable();
+  private apiUrl = 'https://nzolanet-back.onrender.com';
+  private reportsSubject = new BehaviorSubject<ReportDTO[]>([]);
+  public reports$ = this.reportsSubject.asObservable();
 
-  constructor() {
-    this.loadInitialReports();
-  }
+  constructor(
+    private http: HttpClient,
+    private auth: Auth
+  ) {}
 
-  private loadInitialReports() {
-    const initialReports: Report[] = [];
-    this.reportsSubject.next(initialReports);
-  }
-
-  addReport(report: Omit<Report, 'id' | 'criado_em' | 'status'>) {
-    const currentReports = this.reportsSubject.value;
-    const newReport: Report = {
-      ...report,
-      id: Date.now().toString(),
-      criado_em: new Date().toISOString(),
-      status: 'pendente'
+  private getHeaders() {
+    const token = this.auth.getToken();
+    return {
+      headers: new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      })
     };
-    this.reportsSubject.next([newReport, ...currentReports]);
-    return newReport;
   }
 
-  getReports(): Report[] {
-    return this.reportsSubject.value;
-  }
+  async create(reportData: {
+    referencia_tipo: string;
+    referencia_id: string;
+    motivo: string;
+    descricao?: string;
+  }): Promise<any> {
+    const token = this.auth.getToken();
+    if (!token) return { success: false, message: 'Não autenticado' };
 
-  getPendingReports(): Report[] {
-    return this.reportsSubject.value.filter(r => r.status === 'pendente');
-  }
-
-  resolveReport(reportId: string, status: 'resolvido' | 'ignorado') {
-    const currentReports = this.reportsSubject.value;
-    const index = currentReports.findIndex(r => r.id === reportId);
-    if (index !== -1) {
-      currentReports[index].status = status;
-      this.reportsSubject.next([...currentReports]);
+    try {
+      const response: any = await firstValueFrom(
+        this.http.post(
+          `${this.apiUrl}/?route=report&action=create`,
+          reportData,
+          this.getHeaders()
+        )
+      );
+      return response;
+    } catch (error: any) {
+      return { success: false, message: error.error?.message || 'Erro ao enviar denúncia' };
     }
+  }
+
+  async getAll(page = 1, limit = 20): Promise<ReportDTO[]> {
+    const token = this.auth.getToken();
+    if (!token) return [];
+
+    try {
+      const response: any = await firstValueFrom(
+        this.http.get(
+          `${this.apiUrl}/?route=report&action=listarReports&page=${page}&limit=${limit}`,
+          { headers: new HttpHeaders({ 'Authorization': `Bearer ${token}` }) }
+        )
+      );
+
+      if (response.success && Array.isArray(response.data)) {
+        this.reportsSubject.next(response.data);
+        return response.data;
+      }
+      return [];
+    } catch (error) {
+      return [];
+    }
+  }
+
+  async resolve(reportId: string): Promise<any> {
+    const token = this.auth.getToken();
+    if (!token) return { success: false };
+
+    try {
+      const response: any = await firstValueFrom(
+        this.http.put(
+          `${this.apiUrl}/?route=admin&action=resolverReport`,
+          { id: reportId, acao: 'apenas_resolver' },
+          this.getHeaders()
+        )
+      );
+      return response;
+    } catch (error: any) {
+      return { success: false };
+    }
+  }
+
+  async ignore(reportId: string): Promise<any> {
+    const token = this.auth.getToken();
+    if (!token) return { success: false };
+
+    try {
+      const response: any = await firstValueFrom(
+        this.http.put(
+          `${this.apiUrl}/?route=admin&action=ignorarReport`,
+          { id: reportId },
+          this.getHeaders()
+        )
+      );
+      return response;
+    } catch (error: any) {
+      return { success: false };
+    }
+  }
+
+  getReports(): ReportDTO[] {
+    return this.reportsSubject.value;
   }
 }

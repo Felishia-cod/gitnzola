@@ -8,6 +8,8 @@ import {
 } from '@angular/forms';
 import { RouterLink, Router } from '@angular/router';
 import { Auth } from '../../services/auth';
+import { UserService } from '../../services/user';
+import { PostService } from '../../services/post';
 
 @Component({
   selector: 'app-login',
@@ -26,20 +28,11 @@ export class LoginComponent {
   isLoading = false;
   currentUser: any = null;
 
-  private redirectAfterLogin(user: any): void {
-    const isAdmin = user?.isAdmin === true || user?.is_admin === true || user?.is_admin === 1;
-
-
-    if (isAdmin) {
-      this.router.navigate(['/admin']);
-    } else {
-      this.router.navigate(['/home']);
-    }
-  }
-
   constructor(
     private fb: FormBuilder,
     private auth: Auth,
+    private userService: UserService,
+    private postService: PostService,
     private router: Router
   ) {
     this.loginForm = this.fb.group({
@@ -47,12 +40,18 @@ export class LoginComponent {
       password: ['', Validators.required]
     });
     
+    // Se já estiver logado, redirecionar
     if (this.auth.isAuthenticated()) {
-      this.redirectAfterLogin(this.auth.getUser());
+      const user = this.auth.getUser();
+      if (user?.is_admin) {
+        this.router.navigate(['/admin']);
+      } else {
+        this.router.navigate(['/feed']);
+      }
     }
   }
 
-  onSubmit() {
+  async onSubmit() {
     if (this.loginForm.invalid) {
       Object.keys(this.loginForm.controls).forEach(key => {
         this.loginForm.get(key)?.markAsTouched();
@@ -64,15 +63,23 @@ export class LoginComponent {
     const { email, password } = this.loginForm.value;
 
     this.auth.login(email, password).subscribe({
-      next: (response) => {
+      next: async (response) => {
         console.log('Resposta do login:', response);
         this.isLoading = false;
 
         if (response.success) {
-          const user = response.user || response.data?.user || this.auth.getUser();
-          this.currentUser = user;
+          this.currentUser = response.data?.user;
+          const user = this.auth.getUser();
+          if (user) {
+            this.userService.setUser(user);
+          }
+          await this.postService.refreshPosts();
           alert('Login efetuado com sucesso!');
-          this.redirectAfterLogin(user);
+          if (user?.is_admin) {
+            this.router.navigate(['/admin']);
+          } else {
+            this.router.navigate(['/feed']);
+          }
         } else {
           alert(response.message || 'Erro ao fazer login');
         }

@@ -26,6 +26,7 @@ export const routes: Routes = [
       { path: 'amigos', component: AmigosComponent },
       { path: 'notificacoes', component: NotificationsComponent },
       { path: 'perfil', component: ProfileComponent },
+      { path: 'perfil/:id', component: ProfileComponent },
       { path: 'guardados', component: GuardadosComponent },
       { path: 'definicoes', component: SettingsComponent },
       { path: 'explorar', component: ExplorarComponent },
@@ -33,7 +34,6 @@ export const routes: Routes = [
   },
   // ADMIN - ROTA SEPARADA (FORA DO FEED)
   { path: 'admin', component: AdminComponent },
-  { path: 'home', redirectTo: '/feed', pathMatch: 'full' },
   { path: 'confirmar-registo', component: ConfirmarRegistoComponent },
   { path: '', redirectTo: '/login', pathMatch: 'full' },
   { path: '**', redirectTo: '/login' }

@@ -1,13 +1,15 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { Subscription, firstValueFrom } from 'rxjs';
+import { Auth } from '../../services/auth';
 import { UserService, UserData } from '../../services/user';
 import { PostService, Post, Comment } from '../../services/post';
 
 interface AppUser {
-  id: string;
+  id: number;
   name: string;
   email: string;
   handle: string;
@@ -43,7 +45,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     id: 'admin-1', // ADICIONADO: id
     name: 'Admin',
     handle: '@admin',
-    avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100',
+    avatar: "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E",
     bio: 'Administrador do NzolaNet',
     email: 'admin@nzolanet.ao',
     location: 'Luanda, Angola',
@@ -77,11 +79,23 @@ export class AdminComponent implements OnInit, OnDestroy {
   confirmAction: any = null;
   confirmMessage: string = '';
 
+  // Modal de perfil do user
+  showUserProfileModal: boolean = false;
+  selectedProfileUser: AppUser | null = null;
+  profileTab: string = 'posts';
+  profileUserPosts: Post[] = [];
+  profileFollowers: AppUser[] = [];
+  profileFollowing: AppUser[] = [];
+
   private postsSubscription: Subscription | null = null;
+
+  private apiUrl = 'https://nzolanet-back.onrender.com';
 
   constructor(
     private userService: UserService,
     private postService: PostService,
+    private auth: Auth,
+    private http: HttpClient,
     private router: Router
   ) {}
 
@@ -128,24 +142,69 @@ export class AdminComponent implements OnInit, OnDestroy {
     }
   }
 
-  loadUsers() {
-    // Carregar utilizadores do backend via UserService
+  private normalizeUrl(url: string | null | undefined, fallback: string = ''): string {
+    if (!url) return fallback;
+    if (url.includes('localhost')) {
+      return url.replace(/https?:\/\/localhost:\d+\/NzolaNet\/backend/g, this.apiUrl);
+    }
+    if (url.startsWith('/NzolaNet/backend')) {
+      return this.apiUrl + url.replace('/NzolaNet/backend', '');
+    }
+    return url;
+  }
+
+  private getHeaders() {
+    const token = this.auth.getToken();
+    return {
+      headers: new HttpHeaders({
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      })
+    };
+  }
+
+  async loadUsers() {
+    const endpoints = [
+      `${this.apiUrl}/?route=user&action=pesquisarUtilizadores&q=a`,
+      `${this.apiUrl}/?route=user&action=listar`,
+      `${this.apiUrl}/?route=user&action=todos`,
+      `${this.apiUrl}/?route=admin&action=listarUsers`
+    ];
+
+    for (const endpoint of endpoints) {
+      try {
+        const response: any = await firstValueFrom(this.http.get(endpoint, this.getHeaders()));
+        let usersData: any[] | null = null;
+        if (response.success && Array.isArray(response.data)) {
+          usersData = response.data;
+        } else if (Array.isArray(response)) {
+          usersData = response;
+        } else if (response.success && response.users && Array.isArray(response.users)) {
+          usersData = response.users;
+        }
+        if (usersData && usersData.length > 0) {
+          const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E";
+          this.users = usersData.map((u: any) => ({
+            id: parseInt(u.id || '0'),
+            name: u.nome || u.name || '',
+            email: u.email || '',
+            handle: u.handle || `@${u.username || (u.nome || '').toLowerCase().replace(/\s/g, '')}`,
+            avatar: this.normalizeUrl(u.foto_perfil || u.avatar, fallback),
+            bio: u.bio || '',
+            is_admin: u.is_admin ? 1 : 0,
+            is_active: u.ativo !== undefined ? (u.ativo ? 1 : 0) : 1,
+            privacy: u.privacidade === 'privado' ? 'privado' : 'publico'
+          }));
+          console.log('✅ Admin: users carregados da BD:', this.users.length, '- endpoint:', endpoint);
+          return;
+        }
+      } catch (error) {
+        console.log('⚠️ Admin: tentativa falhou para', endpoint);
+        continue;
+      }
+    }
+    console.log('❌ Admin: todos os endpoints falharam, users vazio');
     this.users = [];
-    this.userService.listUsers().then((data) => {
-      this.users = data.map((u: any) => ({
-        id: u.id?.toString() || Date.now().toString(),
-        name: u.nome || u.username || 'Sem nome',
-        email: u.email || '',
-        handle: u.username ? `@${u.username}` : (u.handle || `@${(u.nome||'').toLowerCase().replace(/\s/g,'')}`),
-        avatar: u.foto_perfil || 'https://i.pravatar.cc/150?img=' + (Math.floor(Math.random() * 70) + 1),
-        bio: u.bio || '',
-        is_admin: (u.is_admin === true || u.is_admin === 1) ? 1 : 0,
-        is_active: (u.is_active === true || u.is_active === 1) ? 1 : 0,
-        privacy: u.privacidade || u.privacy || 'publico'
-      }));
-    }).catch(err => {
-      console.error('❌ Erro ao carregar utilizadores no Admin:', err);
-    });
   }
 
   loadReports() {
@@ -182,21 +241,21 @@ export class AdminComponent implements OnInit, OnDestroy {
     this.activeTab = tab;
   }
 
-  toggleUserActive(userId: string) {
+  toggleUserActive(userId: number) {
     const user = this.users.find(u => u.id === userId);
     if (user) {
       user.is_active = user.is_active === 1 ? 0 : 1;
     }
   }
 
-  toggleUserRole(userId: string) {
+  toggleUserRole(userId: number) {
     const user = this.users.find(u => u.id === userId);
     if (user && user.email !== 'admin@nzolanet.ao') {
       user.is_admin = user.is_admin === 1 ? 0 : 1;
     }
   }
 
-  deleteUser(userId: string) {
+  deleteUser(userId: number) {
     this.showConfirm('Tens a certeza que queres eliminar este utilizador?', () => {
       this.users = this.users.filter(u => u.id !== userId);
       this.closeConfirm();
@@ -210,7 +269,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     });
   }
 
-  getUserPostsCount(userId: string): number {
+  getUserPostsCount(userId: number): number {
     const user = this.users.find(u => u.id === userId);
     if (user) {
       const count = this.allPosts.filter(p => p.userName === user.name).length;
@@ -219,7 +278,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     return 0;
   }
 
-  viewUserPosts(userId: string) {
+  viewUserPosts(userId: number) {
     const user = this.users.find(u => u.id === userId);
     if (user) {
       this.selectedUserName = user.name;
@@ -305,16 +364,38 @@ export class AdminComponent implements OnInit, OnDestroy {
     }
   }
 
-  getUserName(userId: string | number): string {
-    const lookupId = userId?.toString();
-    const user = this.users.find(u => u.id === lookupId);
-    return user ? user.name : lookupId;
+  getUserName(userId: number): string {
+    const user = this.users.find(u => u.id === userId);
+    return user ? user.name : userId.toString();
   }
 
-  getUserAvatar(userId: string | number): string {
-    const lookupId = userId?.toString();
-    const user = this.users.find(u => u.id === lookupId);
-    return user ? user.avatar : '';
+  getUserAvatar(userId: number): string {
+    const user = this.users.find(u => u.id === userId);
+    const fallback = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E";
+    return user ? user.avatar || fallback : fallback;
+  }
+
+  openUserProfile(userId: number) {
+    const user = this.users.find(u => u.id === userId);
+    if (!user) return;
+    this.selectedProfileUser = user;
+    this.profileTab = 'posts';
+    this.profileUserPosts = this.allPosts.filter(p => p.userName === user.name);
+    this.profileFollowers = this.users.filter(u => u.id !== userId && u.is_active === 1).slice(0, 3);
+    this.profileFollowing = this.users.filter(u => u.id !== userId && u.is_active === 1 && u.id <= 4);
+    this.showUserProfileModal = true;
+  }
+
+  closeUserProfileModal() {
+    this.showUserProfileModal = false;
+    this.selectedProfileUser = null;
+    this.profileUserPosts = [];
+    this.profileFollowers = [];
+    this.profileFollowing = [];
+  }
+
+  setProfileTab(tab: string) {
+    this.profileTab = tab;
   }
 
   formatDate(dateString: string): string {
@@ -323,6 +404,6 @@ export class AdminComponent implements OnInit, OnDestroy {
 
   logout() {
     localStorage.clear();
-    this.router.navigate(['/login']);
+    window.location.href = '/login';
   }
 }

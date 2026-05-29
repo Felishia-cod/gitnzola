@@ -54,14 +54,21 @@
         </div>
         
         <div class="profile-actions">
-          <button class="edit-btn" (click)="openEditModal()">
+          <button class="back-btn" *ngIf="!isOwnProfile" (click)="goBack()">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="19" y1="12" x2="5" y2="12"/>
+              <polyline points="12 19 5 12 12 5"/>
+            </svg>
+            Voltar
+          </button>
+          <button class="edit-btn" *ngIf="isOwnProfile" (click)="openEditModal()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M17 3l4 4-7 7H10v-4l7-7z"/>
               <path d="M4 20h16"/>
             </svg>
             Editar perfil
           </button>
-          <button class="logout-btn" (click)="logout()">
+          <button class="logout-btn" *ngIf="isOwnProfile" (click)="logout()">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
               <polyline points="16 17 21 12 16 7"/>
@@ -266,13 +273,22 @@
           <label>Foto de perfil</label>
           <div class="avatar-preview">
             <img [src]="editForm.avatar" class="preview-avatar">
-            <button class="change-avatar-btn" (click)="openAvatarUpload()">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M17 3l4 4-7 7H10v-4l7-7z"/>
-                <path d="M4 20h16"/>
-              </svg>
-              Alterar
-            </button>
+            <div class="avatar-actions">
+              <button class="change-avatar-btn" (click)="openAvatarUpload()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M17 3l4 4-7 7H10v-4l7-7z"/>
+                  <path d="M4 20h16"/>
+                </svg>
+                Alterar
+              </button>
+              <button class="remove-avatar-btn" (click)="removeAvatar()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <line x1="18" y1="6" x2="6" y2="18"/>
+                  <line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+                Remover
+              </button>
+            </div>
           </div>
         </div>
         
