@@ -21,7 +21,7 @@ export class FeedComponent implements OnInit {
   showSearchResults: boolean = false;
   
   me = {
-    id: 999,
+    id: '',
     name: '',
     handle: '',
     avatar: ''
@@ -70,28 +70,26 @@ export class FeedComponent implements OnInit {
     { id: 6, name: 'Paulo Mendes', handle: '@paulom', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100' }
   ];
 
+  private defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E";
+
   constructor(
     private userService: UserService,
     private postService: PostService,
     private router: Router
   ) {}
 
-  ngOnInit() {
+  async ngOnInit() {
     this.userService.userData$.subscribe((userData: UserData | null) => {
       if (userData) {
-        this.userAvatar = userData.avatar;
-        this.me.name = userData.name;
-        this.me.handle = userData.handle;
-        this.me.avatar = userData.avatar;
+        this.setMe(userData);
       }
     });
     
     const userData = this.userService.getCurrentUser();
     if (userData) {
-      this.userAvatar = userData.avatar;
-      this.me.name = userData.name;
-      this.me.handle = userData.handle;
-      this.me.avatar = userData.avatar;
+      this.setMe(userData);
+    } else {
+      await this.userService.loadUserProfile();
     }
     
     this.initUsersList();
@@ -102,6 +100,14 @@ export class FeedComponent implements OnInit {
         this.loadIncomingRequestsCount();
       }
     });
+  }
+
+  private setMe(userData: UserData) {
+    this.userAvatar = userData.avatar || this.defaultAvatar;
+    this.me.name = userData.name;
+    this.me.handle = userData.handle;
+    this.me.id = userData.id;
+    this.me.avatar = userData.avatar || this.defaultAvatar;
   }
   
   initUsersList() {

@@ -53,10 +53,10 @@ export class UserService {
   private mapUser(backend: any): UserData {
     return {
       id: backend.id?.toString() || Date.now().toString(),
-      name: backend.nome || backend.name || '',
+      name: backend.nome || backend.name || backend.display_name || backend.full_name || backend.username || '',
       email: backend.email || '',
-      handle: backend.handle || `@${backend.username || (backend.nome || '').toLowerCase().replace(/\s/g, '')}`,
-      avatar: this.normalizeUrl(backend.foto_perfil || backend.avatar || DEFAULT_AVATAR),
+      handle: backend.handle || `@${backend.username || (backend.nome || backend.name || backend.display_name || backend.full_name || '').toLowerCase().replace(/\s/g, '')}`,
+      avatar: this.normalizeUrl(backend.foto_perfil || backend.avatar || backend.foto || backend.profile_picture || DEFAULT_AVATAR),
       bio: backend.bio || '',
       location: '',
       joinedDate: backend.criado_em || new Date().toLocaleDateString('pt-PT'),

@@ -64,7 +64,7 @@ export class LoginComponent {
 
     this.auth.login(email, password).subscribe({
       next: async (response) => {
-        console.log('Resposta do login:', response);
+        console.log('Resposta do login:', JSON.stringify(response).substring(0, 300));
         this.isLoading = false;
 
         if (response.success) {

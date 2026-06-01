@@ -142,12 +142,26 @@ export class ProfileComponent implements OnInit, OnDestroy {
       this.postsSubscription = this.postService.posts$.subscribe(posts => {
         if (this.currentUser?.id) {
           this.userPosts = posts.filter(p => p.userId === this.currentUser!.id && !p.eliminado);
+          this.fillPostUserNames(this.currentUser);
           if (this.currentUser) {
             this.currentUser.postsCount = this.userPosts.length;
           }
           this.cdr.detectChanges();
         }
       });
+    }
+  }
+
+  private fillPostUserNames(user: UserData | null) {
+    if (!user) return;
+    for (const post of this.userPosts) {
+      if (!post.userName && post.userHandle) {
+        if (post.userId === user.id && user.name) {
+          post.userName = user.name;
+        } else {
+          post.userName = post.userHandle.replace('@', '');
+        }
+      }
     }
   }
 
@@ -163,6 +177,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
       // Carregar posts deste usuário
       const posts = await this.postService.getUserPostsById(userId);
       this.userPosts = posts.filter(p => !p.eliminado);
+      this.fillPostUserNames(userData);
       if (this.viewedUser) {
         this.viewedUser.postsCount = this.userPosts.length;
       }

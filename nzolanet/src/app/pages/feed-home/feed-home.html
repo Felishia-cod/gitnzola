@@ -2,7 +2,7 @@
   <div class="home-main">
     <div class="composer-card">
       <div class="composer-header">
-        <img [src]="me.avatar" class="avatar-composer">
+        <img [src]="me.avatar || 'data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 48 48%22%3E%3Ccircle fill=%22%23d1d5db%22 cx=%2224%22 cy=%2215%22 r=%229%22/%3E%3Cpath fill=%22%23d1d5db%22 d=%22M8 44c0-9 7-16 16-16s16 7 16 16%22/%3E%3C/svg%3E'" class="avatar-composer">
         <textarea [(ngModel)]="composer" placeholder="No que estás a pensar?" rows="2"></textarea>
       </div>
       

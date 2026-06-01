@@ -106,36 +106,52 @@ export class AmigosComponent implements OnInit {
     }
     
     try {
-      // Buscar todos os usuários (sem pesquisa)
-      const url = `${this.apiUrl}/?route=user&action=pessoas&page=1&limit=50`;
-      const response: any = await this.http.get(url, this.getHeaders()).toPromise();
-      
-      console.log('📦 Usuários da BD:', response);
-      
-      let usersData = [];
-      if (response.success && response.data && Array.isArray(response.data)) {
-        usersData = response.data;
-      } else if (response.data && Array.isArray(response.data)) {
-        usersData = response.data;
-      } else if (Array.isArray(response)) {
-        usersData = response;
+      const endpoints = [
+        `${this.apiUrl}/?route=user&action=pesquisarUtilizadores&q=a`,
+        `${this.apiUrl}/?route=user&action=listar`,
+        `${this.apiUrl}/?route=user&action=todos`,
+        `${this.apiUrl}/?route=admin&action=listarUsers`
+      ];
+
+      let usersData: any[] = [];
+
+      for (const endpoint of endpoints) {
+        try {
+          const response: any = await this.http.get(endpoint, this.getHeaders()).toPromise();
+          let data: any[] | null = null;
+          if (response.success && Array.isArray(response.data)) {
+            data = response.data;
+          } else if (Array.isArray(response)) {
+            data = response;
+          } else if (response.success && response.users && Array.isArray(response.users)) {
+            data = response.users;
+          }
+          if (data && data.length > 0) {
+            usersData = data;
+            console.log('📦 Usuários carregados de:', endpoint);
+            break;
+          }
+        } catch {
+          continue;
+        }
       }
       
       if (usersData.length > 0) {
         this.users = usersData.map((user: any) => ({
           id: user.id?.toString() || '',
-          name: user.name || user.username || '',
-          handle: user.handle || `@${(user.name || '').toLowerCase().replace(/\s/g, '')}`,
+          name: user.name || user.nome || user.username || '',
+          handle: user.handle || `@${(user.username || user.nome || user.name || '').toLowerCase().replace(/\s/g, '')}`,
           avatar: this.normalizeUrl(user.avatar || user.foto_perfil, "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E"),
           bio: user.bio || '',
           privacy: user.privacy === 'private' ? 'private' : 'public'
         }));
         
         console.log('✅ Usuários carregados:', this.users.length);
+      } else {
+        this.loadMockUsers();
       }
     } catch (error) {
       console.error('❌ Erro ao carregar usuários:', error);
-      // Fallback para dados mockados apenas se a API falhar
       this.loadMockUsers();
     } finally {
       this.isLoading = false;

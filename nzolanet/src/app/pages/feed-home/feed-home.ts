@@ -96,29 +96,34 @@ export class HomeComponent implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef
   ) {}
 
-  ngOnInit() {
-    // Redirecionar admin para /admin
+  async ngOnInit() {
+    // Carregar dados do usuário logado
     const currentUserData = this.userService.getCurrentUser();
-    if (currentUserData?.is_admin) {
-      this.router.navigate(['/admin']);
-      return;
+    
+    if (currentUserData) {
+      if (currentUserData.is_admin) {
+        this.router.navigate(['/admin']);
+        return;
+      }
+      this.setCurrentUserData(currentUserData);
+    } else {
+      const userData = await this.userService.loadUserProfile();
+      if (userData) {
+        if (userData.is_admin) {
+          this.router.navigate(['/admin']);
+          return;
+        }
+        this.setCurrentUserData(userData);
+      }
     }
 
-    // Carregar dados do usuário logado
     this.userSubscription = this.userService.userData$.subscribe((userData: UserData | null) => {
       if (userData) {
         if (userData.is_admin) {
           this.router.navigate(['/admin']);
           return;
         }
-        this.currentUser = userData;
-        this.me = {
-          id: userData.id || '0',
-          name: userData.name,
-          handle: userData.handle,
-          avatar: userData.avatar || this.getDefaultAvatar()
-        };
-
+        this.setCurrentUserData(userData);
       }
     });
 
@@ -132,6 +137,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.postsSubscription = this.postService.posts$.subscribe((posts: Post[]) => {
 
       this.filteredPosts = [...posts].sort((a, b) => b.id - a.id);
+      this.fillPostUserNames();
       this.loadSavedPosts();
     });
 
@@ -143,12 +149,34 @@ export class HomeComponent implements OnInit, OnDestroy {
     }, 60000);
   }
 
+  private setCurrentUserData(userData: UserData) {
+    this.currentUser = userData;
+    this.me = {
+      id: userData.id || '0',
+      name: userData.name,
+      handle: userData.handle,
+      avatar: userData.avatar || this.getDefaultAvatar()
+    };
+  }
+
   ngOnDestroy() {
     if (this.postsSubscription) {
       this.postsSubscription.unsubscribe();
     }
     if (this.userSubscription) {
       this.userSubscription.unsubscribe();
+    }
+  }
+
+  private fillPostUserNames() {
+    for (const post of this.filteredPosts) {
+      if (!post.userName && post.userHandle) {
+        if (post.userId === this.me.id && this.me.name) {
+          post.userName = this.me.name;
+        } else {
+          post.userName = post.userHandle.replace('@', '');
+        }
+      }
     }
   }
 

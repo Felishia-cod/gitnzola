@@ -105,11 +105,11 @@ export class PostService {
     return {
       id: parseInt(backend.id || '0'),
       userId: (backend.user_id || '').toString(),
-      userName: backend.autor_nome || 'Carregando...',
+      userName: backend.autor_nome || backend.nome || backend.name || backend.display_name || backend.full_name || backend.username || backend.autor_username || '',
       userHandle: backend.autor_username
         ? `@${backend.autor_username}`
-        : `@${(backend.autor_nome || '').toLowerCase().replace(/\s/g, '')}`,
-      userAvatar: this.normalizeUrl(backend.autor_foto_perfil, DEFAULT_AVATAR),
+        : `@${backend.username || (backend.autor_nome || backend.nome || backend.name || backend.display_name || backend.full_name || '').toLowerCase().replace(/\s/g, '')}`,
+      userAvatar: this.normalizeUrl(backend.autor_foto_perfil || backend.foto_perfil || backend.avatar || backend.foto || backend.profile_picture, DEFAULT_AVATAR),
       time: this.formatTime(backend.criado_em),
       text: backend.conteudo || '',
       image: imageUrl,
@@ -131,11 +131,11 @@ export class PostService {
     return backend.map((c: any) => ({
       id: parseInt(c.id || '0'),
       userId: (c.user_id || c.userId || '').toString(),
-      userName: c.autor_nome || c.user_name || 'Usuário',
-      userHandle: c.autor_username
-        ? `@${c.autor_username}`
-        : `@${(c.autor_nome || 'user').toLowerCase().replace(/\s/g, '')}`,
-      userAvatar: this.normalizeUrl(c.autor_foto_perfil || c.user_avatar, DEFAULT_AVATAR),
+      userName: c.autor_nome || c.user_name || c.nome || c.name || c.display_name || c.full_name || c.username || '',
+      userHandle: c.autor_username || c.username
+        ? `@${c.autor_username || c.username}`
+        : `@${(c.autor_nome || c.nome || c.name || c.display_name || c.full_name || '').toLowerCase().replace(/\s/g, '')}`,
+      userAvatar: this.normalizeUrl(c.autor_foto_perfil || c.user_avatar || c.foto_perfil || c.avatar || c.foto || c.profile_picture, DEFAULT_AVATAR),
       text: c.conteudo || c.text || '',
       time: this.formatTime(c.criado_em),
       likes: 0,
