@@ -931,7 +931,6 @@
   top: 5rem;
 }
 
-.trending-card,
 .suggestions-card {
   background: var(--card);
   border: 1px solid var(--border);
@@ -940,12 +939,10 @@
   margin-bottom: 1rem;
 }
 
-.trending-card:last-child,
 .suggestions-card:last-child {
   margin-bottom: 0;
 }
 
-.trending-card h3,
 .suggestions-card h3 {
   display: flex;
   align-items: center;
@@ -954,41 +951,6 @@
   font-weight: 600;
   margin-bottom: 0.75rem;
   color: var(--foreground);
-}
-
-.trending-card h3 svg {
-  width: 14px;
-  height: 14px;
-  color: var(--primary);
-}
-
-.trending-list {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.trending-list li {
-  display: flex;
-  justify-content: space-between;
-  padding: 0.25rem 0;
-  font-size: 0.75rem;
-  cursor: pointer;
-}
-
-.trending-list li:hover {
-  color: var(--primary);
-}
-
-.trend-tag {
-  font-weight: 500;
-  color: var(--foreground);
-}
-
-.trend-count {
-  font-size: 0.65rem;
-  color: var(--muted-foreground);
 }
 
 .suggestions-list {

@@ -316,6 +316,41 @@ export class PostService {
     }
   }
 
+  async likeComment(commentId: number): Promise<any> {
+    const token = this.auth.getToken();
+    if (!token) return { success: false };
+
+    try {
+      const response: any = await firstValueFrom(
+        this.http.post(
+          `${this.apiUrl}/?route=comment&action=like`,
+          { comment_id: commentId.toString() },
+          this.getHeaders()
+        )
+      );
+      return response;
+    } catch (error: any) {
+      return { success: false };
+    }
+  }
+
+  async unlikeComment(commentId: number): Promise<any> {
+    const token = this.auth.getToken();
+    if (!token) return { success: false };
+
+    try {
+      const response: any = await firstValueFrom(
+        this.http.delete(
+          `${this.apiUrl}/?route=comment&action=unlike&comment_id=${commentId}`,
+          this.getHeaders()
+        )
+      );
+      return response;
+    } catch (error: any) {
+      return { success: false };
+    }
+  }
+
   async addComment(postId: number, conteudo: string): Promise<any> {
     const token = this.auth.getToken();
     if (!token) return { success: false };
