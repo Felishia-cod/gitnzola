@@ -80,14 +80,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     { name: 'Ciano', code: '#06B6D4' },
     { name: 'Verde limão', code: '#84CC16' }
   ];
-  
-  trendingTopics = [
-    { tag: '#Kuduro2026', count: '12,4K posts' },
-    { tag: '#PalancaNegra', count: '8,1K posts' },
-    { tag: '#NzolaNet', count: '5,7K posts' },
-    { tag: '#Luanda', count: '3,9K posts' }
-  ];
-  
+
   followingUsers: number[] = [];
   followersUsers: number[] = [];
   suggestions: any[] = [];
@@ -125,7 +118,7 @@ export class HomeComponent implements OnInit, OnDestroy {
           handle: userData.handle,
           avatar: userData.avatar || this.getDefaultAvatar()
         };
-        console.log('👤 Usuário logado:', this.me);
+
       }
     });
 
@@ -137,7 +130,7 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     // Inscrever para atualizações de posts
     this.postsSubscription = this.postService.posts$.subscribe((posts: Post[]) => {
-      console.log('📢 Posts atualizados no feed:', posts.length);
+
       this.filteredPosts = [...posts].sort((a, b) => b.id - a.id);
       this.loadSavedPosts();
     });
@@ -219,8 +212,19 @@ export class HomeComponent implements OnInit, OnDestroy {
     localStorage.setItem('followersUsers', JSON.stringify(this.followersUsers));
   }
   
-  private loadSuggestions() {
-    this.suggestions = [];
+  private async loadSuggestions() {
+    try {
+      const users = await this.userService.searchUsers('a');
+      const filtered = users.filter(u => u.id !== this.me.id && !this.followingUsers.includes(Number(u.id)));
+      this.suggestions = filtered.slice(0, 7).map(u => ({
+        id: Number(u.id),
+        name: u.name,
+        handle: u.handle,
+        avatar: u.avatar
+      }));
+    } catch (error) {
+      this.suggestions = [];
+    }
   }
   
   async sendFriendRequest(userId: number) {
@@ -479,7 +483,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     
     // Prevenir múltiplos envios
     if (this.isPublishing) {
-      console.log('⏳ Já está publicando...');
       return;
     }
     
@@ -494,11 +497,6 @@ export class HomeComponent implements OnInit, OnDestroy {
         mediaFiles.push(this.selectedVideoFile);
       }
       
-      console.log('📤 Publicando post:', {
-        conteudo: this.composer,
-        mediaCount: mediaFiles.length
-      });
-
       const result = await this.postService.addPost({
         conteudo: this.composer || '',
         media: mediaFiles.length > 0 ? mediaFiles : undefined,
@@ -515,12 +513,11 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.showColorPickerForNewPost = false;
 
         this.showAlert('Sucesso', 'Publicação criada com sucesso!', 'success');
-        console.log('✅ Post publicado e feed atualizado');
       } else {
         this.showAlert('Erro', result?.message || 'Erro ao criar publicação', 'error');
       }
     } catch (error) {
-      console.error('❌ Erro ao publicar:', error);
+
       this.showAlert('Erro', 'Ocorreu um erro ao publicar. Tente novamente.', 'error');
     } finally {
       this.isPublishing = false;
@@ -531,12 +528,7 @@ export class HomeComponent implements OnInit, OnDestroy {
   async toggleBaze(postId: number) {
     const post = this.filteredPosts.find(p => p.id === postId);
     if (!post) return;
-    
-    if (post.userId === this.me.id) {
-      this.showAlert('Ação não permitida', 'Você não pode dar baze no seu próprio post!', 'warning');
-      return;
-    }
-    
+
     const wasLiked = post.liked;
     post.liked = !post.liked;
     post.bazes += post.liked ? 1 : -1;
@@ -593,8 +585,24 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
-  likeComment(postId: number, commentId: number) {
-    console.log('Like no comentário:', commentId);
+  async likeComment(postId: number, commentId: number) {
+    const post = this.filteredPosts.find(p => p.id === postId);
+    if (!post) return;
+
+    const comment = post.comments.find(c => c.id === commentId);
+    if (!comment) return;
+
+    comment.likedByUser = !comment.likedByUser;
+    comment.likes += comment.likedByUser ? 1 : -1;
+
+    const result = comment.likedByUser
+      ? await this.postService.likeComment(commentId)
+      : await this.postService.unlikeComment(commentId);
+
+    if (result?.success === false) {
+      comment.likedByUser = !comment.likedByUser;
+      comment.likes += comment.likedByUser ? 1 : -1;
+    }
   }
 
   editComment(comment: Comment) {
