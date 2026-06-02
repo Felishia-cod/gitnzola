@@ -5,7 +5,7 @@ import { timeout } from 'rxjs/operators';
 import { Auth } from './auth';
 
 export interface Comment {
-  id: number;
+  id: string;
   userId: string;
   userName: string;
   userHandle: string;
@@ -22,12 +22,12 @@ export interface Comment {
   saved?: boolean;
   eliminado?: boolean;
   removido_por_admin?: boolean;
-  post_id?: number;
+  post_id?: string;
   conteudo?: string;
 }
 
 export interface Post {
-  id: number;
+  id: string;
   userId: string;
   userName: string;
   userHandle: string;
@@ -36,7 +36,6 @@ export interface Post {
   text: string;
   image?: string;
   video?: string;
-  bgColor?: string;
   bazes: number;
   comments: Comment[];
   commentsCount: number;
@@ -103,7 +102,7 @@ export class PostService {
     }
 
     return {
-      id: parseInt(backend.id || '0'),
+      id: (backend.id || '').toString(),
       userId: (backend.user_id || '').toString(),
       userName: backend.autor_nome || backend.nome || backend.name || backend.display_name || backend.full_name || backend.username || backend.autor_username || '',
       userHandle: backend.autor_username
@@ -114,7 +113,6 @@ export class PostService {
       text: backend.conteudo || '',
       image: imageUrl,
       video: videoUrl,
-      bgColor: backend.cor || undefined,
       bazes: backend.total_bazes || 0,
       comments: [],
       commentsCount: backend.total_comentarios || 0,
@@ -129,7 +127,7 @@ export class PostService {
   private mapComments(backend: any[]): Comment[] {
     if (!backend || !Array.isArray(backend)) return [];
     return backend.map((c: any) => ({
-      id: parseInt(c.id || '0'),
+      id: (c.id || '').toString(),
       userId: (c.user_id || c.userId || '').toString(),
       userName: c.autor_nome || c.user_name || c.nome || c.name || c.display_name || c.full_name || c.username || '',
       userHandle: c.autor_username || c.username
@@ -174,7 +172,7 @@ export class PostService {
     }
   }
 
-  async addPost(postData: { conteudo: string; media?: File[]; backgroundColor?: string }): Promise<any> {
+  async addPost(postData: { conteudo: string; media?: File[] }): Promise<any> {
     const token = this.auth.getToken();
     if (!token) {
       return { success: false, message: 'Não autenticado' };
@@ -182,9 +180,6 @@ export class PostService {
 
     try {
       const body: any = { conteudo: postData.conteudo };
-      if (postData.backgroundColor) {
-        body.cor = postData.backgroundColor;
-      }
       const response: any = await firstValueFrom(
         this.http.post(
           `${this.apiUrl}/?route=post&action=criar`,
@@ -266,7 +261,7 @@ export class PostService {
     return allOk;
   }
 
-  async deletePost(postId: number): Promise<any> {
+  async deletePost(postId: string): Promise<any> {
     const token = this.auth.getToken();
     if (!token) return { success: false, message: 'Não autenticado' };
 
@@ -281,7 +276,7 @@ export class PostService {
     }
   }
 
-  async likePost(postId: number): Promise<any> {
+  async likePost(postId: string): Promise<any> {
     const token = this.auth.getToken();
     if (!token) return { success: false };
 
@@ -299,7 +294,7 @@ export class PostService {
     }
   }
 
-  async unlikePost(postId: number): Promise<any> {
+  async unlikePost(postId: string): Promise<any> {
     const token = this.auth.getToken();
     if (!token) return { success: false };
 
@@ -316,7 +311,7 @@ export class PostService {
     }
   }
 
-  async likeComment(commentId: number): Promise<any> {
+  async likeComment(commentId: string): Promise<any> {
     const token = this.auth.getToken();
     if (!token) return { success: false };
 
@@ -334,7 +329,7 @@ export class PostService {
     }
   }
 
-  async unlikeComment(commentId: number): Promise<any> {
+  async unlikeComment(commentId: string): Promise<any> {
     const token = this.auth.getToken();
     if (!token) return { success: false };
 
@@ -351,7 +346,7 @@ export class PostService {
     }
   }
 
-  async addComment(postId: number, conteudo: string): Promise<any> {
+  async addComment(postId: string, conteudo: string): Promise<any> {
     const token = this.auth.getToken();
     if (!token) return { success: false };
 
@@ -369,7 +364,7 @@ export class PostService {
     }
   }
 
-  async deleteComment(commentId: number): Promise<any> {
+  async deleteComment(commentId: string): Promise<any> {
     const token = this.auth.getToken();
     if (!token) return { success: false };
 
@@ -404,7 +399,7 @@ export class PostService {
     }
   }
 
-  async loadCommentsByPost(postId: number): Promise<Comment[]> {
+  async loadCommentsByPost(postId: string): Promise<Comment[]> {
     const token = this.auth.getToken();
     if (!token) return [];
 

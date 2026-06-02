@@ -88,11 +88,11 @@ export class GuardadosComponent implements OnInit {
     }
   }
 
-  removeSaved(postId: number) {
+  removeSaved(postId: string) {
     const savedIds = localStorage.getItem('savedPostsIds');
     if (savedIds) {
       let savedPostIds = JSON.parse(savedIds);
-      savedPostIds = savedPostIds.filter((id: number) => id !== postId);
+      savedPostIds = savedPostIds.filter((id: string) => id !== postId);
       localStorage.setItem('savedPostsIds', JSON.stringify(savedPostIds));
       this.loadSavedPosts();
       this.showAlert('Removido', 'Post removido dos guardados!', 'success');

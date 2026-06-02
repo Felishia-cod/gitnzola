@@ -63,6 +63,28 @@
   position: relative;
 }
 
+@media (max-width: 767px) {
+  .search-bar {
+    max-width: none;
+    flex: 0 1 auto;
+    min-width: 0;
+  }
+
+  .search-bar input {
+    width: 120px;
+    font-size: 0.8rem;
+    padding: 0.4rem 0.5rem 0.4rem 1.75rem;
+  }
+
+  .logo h1 {
+    display: none;
+  }
+
+  .header {
+    padding: 0.5rem 0.75rem;
+  }
+}
+
 .search-icon {
   position: absolute;
   left: 0.75rem;

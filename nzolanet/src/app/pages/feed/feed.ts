@@ -35,9 +35,7 @@ export class FeedComponent implements OnInit {
   selectedVideo: string | null = null;
   selectedImageFile: File | null = null;
   selectedVideoFile: File | null = null;
-  selectedPostColor: string = '';
   showEmojiPicker: boolean = false;
-  showColorPicker: boolean = false;
   
   showAlertModal: boolean = false;
   alertTitle: string = '';
@@ -46,16 +44,6 @@ export class FeedComponent implements OnInit {
   
   emojis = ['😂', '❤️', '😍', '👍', '🎉', '🥰', '🙏', '🥺', '😭', '✨'];
   
-  colorPalette = [
-    { name: 'Roxo', code: '#6366F1' },
-    { name: 'Rosa', code: '#EC4899' },
-    { name: 'Laranja', code: '#F59E0B' },
-    { name: 'Verde', code: '#10B981' },
-    { name: 'Vermelho', code: '#EF4444' },
-    { name: 'Roxo escuro', code: '#8B5CF6' },
-    { name: 'Ciano', code: '#06B6D4' },
-    { name: 'Verde limão', code: '#84CC16' }
-  ];
   
   trendingTopics = [
     { tag: '#Kuduro2026', count: '12,4K posts' },
@@ -197,9 +185,7 @@ export class FeedComponent implements OnInit {
     this.selectedVideo = null;
     this.selectedImageFile = null;
     this.selectedVideoFile = null;
-    this.selectedPostColor = '';
     this.showEmojiPicker = false;
-    this.showColorPicker = false;
   }
   
   closePostModal() {
@@ -209,9 +195,7 @@ export class FeedComponent implements OnInit {
     this.selectedVideo = null;
     this.selectedImageFile = null;
     this.selectedVideoFile = null;
-    this.selectedPostColor = '';
     this.showEmojiPicker = false;
-    this.showColorPicker = false;
   }
   
   closePostModalOnBackdrop(event: MouseEvent) {
@@ -224,22 +208,9 @@ export class FeedComponent implements OnInit {
     this.showEmojiPicker = !this.showEmojiPicker;
   }
   
-  toggleColorPicker() {
-    this.showColorPicker = !this.showColorPicker;
-  }
-  
   addEmoji(emoji: string) {
     this.composer += emoji;
     this.showEmojiPicker = false;
-  }
-  
-  selectPostColor(colorCode: string) {
-    this.selectedPostColor = colorCode;
-    this.showColorPicker = false;
-  }
-  
-  removeSelectedColor() {
-    this.selectedPostColor = '';
   }
   
   uploadImage() {
@@ -315,8 +286,7 @@ export class FeedComponent implements OnInit {
     
     const result = await this.postService.addPost({
       conteudo: this.composer || '',
-      media: mediaFiles.length > 0 ? mediaFiles : undefined,
-      backgroundColor: this.selectedPostColor || undefined
+      media: mediaFiles.length > 0 ? mediaFiles : undefined
     });
     
     if (result?.success) {

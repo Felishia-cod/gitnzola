@@ -233,7 +233,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     if (!this.selectedPost || !this.newCommentText.trim() || !this.currentUser) return;
     
     const newComment: Comment = {
-      id: Date.now(),
+      id: Date.now().toString(),
       userId: this.currentUser.id ? this.currentUser.id : '999',
       userName: this.currentUser.name,
       userHandle: this.currentUser.handle,
@@ -256,7 +256,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     this.newCommentText = '';
   }
 
-  likePostComment(commentId: number) {
+  likePostComment(commentId: string) {
     if (!this.selectedPost) return;
     const comment = this.findCommentInPost(this.selectedPost.comments, commentId);
     if (comment) {
@@ -271,7 +271,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
   }
 
-  private findCommentInPost(comments: Comment[], commentId: number): Comment | null {
+  private findCommentInPost(comments: Comment[], commentId: string): Comment | null {
     for (const comment of comments) {
       if (comment.id === commentId) return comment;
       for (const reply of comment.replies) {

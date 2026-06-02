@@ -90,7 +90,7 @@ export class ExplorarComponent implements OnInit {
     if (!this.selectedPost || !this.newCommentText.trim()) return;
     
     const newComment: Comment = {
-      id: Date.now(),
+      id: Date.now().toString(),
       userId: this.me.id,
       userName: this.me.name,
       userHandle: this.me.handle,
@@ -113,7 +113,7 @@ export class ExplorarComponent implements OnInit {
     this.newCommentText = '';
   }
 
-  likePostComment(commentId: number) {
+  likePostComment(commentId: string) {
     if (!this.selectedPost) return;
     const comment = this.findCommentInPost(this.selectedPost.comments, commentId);
     if (comment) {
@@ -131,7 +131,7 @@ export class ExplorarComponent implements OnInit {
     }
   }
 
-  private findCommentInPost(comments: Comment[], commentId: number): Comment | null {
+  private findCommentInPost(comments: Comment[], commentId: string): Comment | null {
     for (const comment of comments) {
       if (comment.id === commentId) return comment;
       for (const reply of comment.replies) {

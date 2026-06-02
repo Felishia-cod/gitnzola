@@ -24,7 +24,7 @@ interface Report {
   id: number;
   reporter_id: number;
   referencia_tipo: 'post' | 'comment';
-  referencia_id: number;
+  referencia_id: string;
   motivo: string;
   descricao: string;
   status: 'pendente' | 'resolvido' | 'ignorado';
@@ -209,8 +209,8 @@ export class AdminComponent implements OnInit, OnDestroy {
 
   loadReports() {
     this.reports = [
-      { id: 1, reporter_id: 2, referencia_tipo: 'post', referencia_id: 1, motivo: 'Spam', descricao: 'Publicação repetitiva', status: 'pendente', criado_em: new Date().toISOString(), alvo_conteudo: 'O pôr-do-sol na Marginal...', alvo_autor: 'Nzinga Domingos' },
-      { id: 2, reporter_id: 3, referencia_tipo: 'comment', referencia_id: 101, motivo: 'Ofensivo', descricao: 'Comentário ofensivo', status: 'pendente', criado_em: new Date().toISOString(), alvo_conteudo: 'Comentário ofensivo...', alvo_autor: 'Kiala Bento' }
+      { id: 1, reporter_id: 2, referencia_tipo: 'post', referencia_id: '1', motivo: 'Spam', descricao: 'Publicação repetitiva', status: 'pendente', criado_em: new Date().toISOString(), alvo_conteudo: 'O pôr-do-sol na Marginal...', alvo_autor: 'Nzinga Domingos' },
+      { id: 2, reporter_id: 3, referencia_tipo: 'comment', referencia_id: '101', motivo: 'Ofensivo', descricao: 'Comentário ofensivo', status: 'pendente', criado_em: new Date().toISOString(), alvo_conteudo: 'Comentário ofensivo...', alvo_autor: 'Kiala Bento' }
     ];
   }
 
@@ -262,7 +262,7 @@ export class AdminComponent implements OnInit, OnDestroy {
     });
   }
 
-  deletePost(postId: number) {
+  deletePost(postId: string) {
     this.showConfirm('Tens a certeza que queres eliminar este post?', () => {
       this.postService.deletePost(postId);
       this.closeConfirm();

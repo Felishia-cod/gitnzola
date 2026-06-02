@@ -22,15 +22,13 @@ export class HomeComponent implements OnInit, OnDestroy {
   selectedVideo: string | null = null;
   selectedImageFile: File | null = null;
   selectedVideoFile: File | null = null;
-  selectedPostColor: string = '';
   showEmojiPicker: boolean = false;
-  showColorPickerForNewPost: boolean = false;
   savedPosts: Post[] = [];
   isPublishing: boolean = false; // Estado de loading para o botão publicar
   
   showReportModal: boolean = false;
   reportTargetType: 'post' | 'comment' = 'post';
-  reportTargetId: number = 0;
+  reportTargetId: string = '';
   reportTargetContent: string = '';
   reportMotivo: string = '';
   reportDescricao: string = '';
@@ -69,17 +67,6 @@ export class HomeComponent implements OnInit, OnDestroy {
   };
 
   emojis = ['😂', '❤️', '😍', '👍', '🎉', '🥰', '🙏', '🥺', '😭', '✨'];
-  
-  colorPalette = [
-    { name: 'Roxo', code: '#6366F1' },
-    { name: 'Rosa', code: '#EC4899' },
-    { name: 'Laranja', code: '#F59E0B' },
-    { name: 'Verde', code: '#10B981' },
-    { name: 'Vermelho', code: '#EF4444' },
-    { name: 'Roxo escuro', code: '#8B5CF6' },
-    { name: 'Ciano', code: '#06B6D4' },
-    { name: 'Verde limão', code: '#84CC16' }
-  ];
 
   followingUsers: number[] = [];
   followersUsers: number[] = [];
@@ -136,7 +123,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     // Inscrever para atualizações de posts
     this.postsSubscription = this.postService.posts$.subscribe((posts: Post[]) => {
 
-      this.filteredPosts = [...posts].sort((a, b) => b.id - a.id);
+      this.filteredPosts = [...posts].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       this.fillPostUserNames();
       this.loadSavedPosts();
     });
@@ -313,7 +300,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     localStorage.setItem('savedPostsIds', JSON.stringify(savedPostIds));
   }
 
-  openReportPostModal(postId: number, postContent: string, postAuthor: string) {
+  openReportPostModal(postId: string, postContent: string, postAuthor: string) {
     this.reportTargetType = 'post';
     this.reportTargetId = postId;
     this.reportTargetContent = postContent;
@@ -322,7 +309,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     this.showReportModal = true;
   }
 
-  openReportCommentModal(commentId: number, commentContent: string, commentAuthor: string) {
+  openReportCommentModal(commentId: string, commentContent: string, commentAuthor: string) {
     this.reportTargetType = 'comment';
     this.reportTargetId = commentId;
     this.reportTargetContent = commentContent;
@@ -392,7 +379,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     post.editText = '';
   }
 
-  async deletePost(postId: number) {
+  async deletePost(postId: string) {
     this.showConfirm('Eliminar Publicação', 'Tem certeza que deseja eliminar esta publicação?', async () => {
       const result = await this.postService.deletePost(postId);
       if (result?.success) {
@@ -419,19 +406,6 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
     this.saveToLocalStorage();
     post.showMenu = false;
-  }
-
-  toggleColorPickerForNewPost() {
-    this.showColorPickerForNewPost = !this.showColorPickerForNewPost;
-  }
-
-  selectPostColor(colorCode: string) {
-    this.selectedPostColor = colorCode;
-    this.showColorPickerForNewPost = false;
-  }
-
-  removeSelectedColor() {
-    this.selectedPostColor = '';
   }
 
   addEmoji(emoji: string) {
@@ -527,8 +501,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       
       const result = await this.postService.addPost({
         conteudo: this.composer || '',
-        media: mediaFiles.length > 0 ? mediaFiles : undefined,
-        backgroundColor: this.selectedPostColor || undefined
+        media: mediaFiles.length > 0 ? mediaFiles : undefined
       });
       
       if (result?.success) {
@@ -537,8 +510,6 @@ export class HomeComponent implements OnInit, OnDestroy {
         this.selectedVideo = null;
         this.selectedImageFile = null;
         this.selectedVideoFile = null;
-        this.selectedPostColor = '';
-        this.showColorPickerForNewPost = false;
 
         this.showAlert('Sucesso', 'Publicação criada com sucesso!', 'success');
       } else {
@@ -553,7 +524,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
-  async toggleBaze(postId: number) {
+  async toggleBaze(postId: string) {
     const post = this.filteredPosts.find(p => p.id === postId);
     if (!post) return;
 
@@ -572,7 +543,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
-  async toggleComments(postId: number) {
+  async toggleComments(postId: string) {
     const post = this.filteredPosts.find(p => p.id === postId);
     if (post) {
       post.showComments = !post.showComments;
@@ -582,7 +553,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
-  async addComment(postId: number) {
+  async addComment(postId: string) {
     const post = this.filteredPosts.find(p => p.id === postId);
     if (post && post.newCommentText?.trim()) {
       const result = await this.postService.addComment(postId, post.newCommentText);
@@ -601,7 +572,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (!comment.replyText) comment.replyText = '';
   }
 
-  async addReply(postId: number, parentComment: Comment) {
+  async addReply(postId: string, parentComment: Comment) {
     if (!parentComment.replyText?.trim()) return;
     
     const result = await this.postService.addComment(postId, parentComment.replyText);
@@ -613,7 +584,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
-  async likeComment(postId: number, commentId: number) {
+  async likeComment(postId: string, commentId: string) {
     const post = this.filteredPosts.find(p => p.id === postId);
     if (!post) return;
 
@@ -651,7 +622,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     comment.editText = '';
   }
 
-  async deleteComment(postId: number, commentId: number) {
+  async deleteComment(postId: string, commentId: string) {
     this.showConfirm('Eliminar Comentário', 'Tem certeza que deseja eliminar este comentário?', async () => {
       const result = await this.postService.deleteComment(commentId);
       if (result?.success) {
@@ -677,13 +648,6 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   isOwnPost(post: Post): boolean {
     return post.userId === this.me.id;
-  }
-
-  getPostBodyStyle(post: Post) {
-    if (post.bgColor && !post.image && !post.video) {
-      return { 'background-color': post.bgColor };
-    }
-    return {};
   }
 
   showAlert(title: string, message: string, type: 'error' | 'success' | 'warning' | 'info' = 'error') {

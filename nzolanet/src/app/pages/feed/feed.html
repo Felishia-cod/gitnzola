@@ -204,12 +204,6 @@
         <button class="remove-video-btn" (click)="removeVideo()">✕</button>
       </div>
       
-      <div class="color-preview" *ngIf="selectedPostColor && !selectedImage && !selectedVideo">
-        <div class="color-preview-box" [style.backgroundColor]="selectedPostColor"></div>
-        <span>Cor selecionada para o post</span>
-        <button class="remove-color-btn" (click)="removeSelectedColor()">✕</button>
-      </div>
-      
       <div class="emoji-picker" *ngIf="showEmojiPicker">
         <div class="emoji-list">
           <button *ngFor="let emoji of emojis" class="emoji-btn" (click)="addEmoji(emoji)">{{ emoji }}</button>
@@ -242,13 +236,6 @@
             </svg>
             Emoji
           </button>
-          <button (click)="toggleColorPicker()">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="3"></circle>
-              <path d="M19.4 4.6C18.3 3.5 16.8 3 15 3c-1.7 0-3.2.5-4.4 1.6-1.2 1.1-1.8 2.6-1.8 4.4 0 1.7.5 3.2 1.6 4.4 1.1 1.2 2.6 1.8 4.4 1.8 1.7 0 3.2-.5 4.4-1.6 1.2-1.1 1.8-2.6 1.8-4.4 0-1.7-.6-3.2-1.6-4.4z"></path>
-            </svg>
-            Cor
-          </button>
         </div>
         <button class="publish-btn" (click)="publishPost()">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -257,18 +244,6 @@
           </svg>
           Publicar
         </button>
-      </div>
-      
-      <div class="color-palette" *ngIf="showColorPicker">
-        <div class="color-buttons">
-          <button *ngFor="let color of colorPalette" 
-                  class="color-option" 
-                  [style.backgroundColor]="color.code"
-                  [class.active]="selectedPostColor === color.code"
-                  (click)="selectPostColor(color.code)">
-            <span class="color-tooltip">{{ color.name }}</span>
-          </button>
-        </div>
       </div>
     </div>
   </div>
