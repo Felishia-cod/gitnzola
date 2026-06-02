@@ -28,9 +28,7 @@ export class NotificationService {
   constructor(
     private http: HttpClient,
     private auth: Auth
-  ) {
-    this.loadNotifications();
-  }
+  ) {}  // loadNotifications é chamado sob demanda para evitar lentidão no startup
 
   private getHeaders() {
     const token = this.auth.getToken();

@@ -2,6 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { firstValueFrom } from 'rxjs';
 import { Router } from '@angular/router';
 import { UserService, UserData } from '../../services/user';
 import { Auth } from '../../services/auth';
@@ -24,6 +25,7 @@ interface User {
 })
 export class AmigosComponent implements OnInit {
   private apiUrl = 'https://nzolanet-back.onrender.com';
+  private defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E";
 
   private normalizeUrl(url: string | null | undefined, fallback: string = ''): string {
     if (!url) return fallback;
@@ -106,45 +108,31 @@ export class AmigosComponent implements OnInit {
     }
     
     try {
-      const endpoints = [
-        `${this.apiUrl}/?route=user&action=pesquisarUtilizadores&q=a`,
-        `${this.apiUrl}/?route=user&action=listar`,
-        `${this.apiUrl}/?route=user&action=todos`,
-        `${this.apiUrl}/?route=admin&action=listarUsers`
-      ];
-
       let usersData: any[] = [];
-
-      for (const endpoint of endpoints) {
-        try {
-          const response: any = await this.http.get(endpoint, this.getHeaders()).toPromise();
-          let data: any[] | null = null;
-          if (response.success && Array.isArray(response.data)) {
-            data = response.data;
-          } else if (Array.isArray(response)) {
-            data = response;
-          } else if (response.success && response.users && Array.isArray(response.users)) {
-            data = response.users;
-          }
-          if (data && data.length > 0) {
-            usersData = data;
-            console.log('📦 Usuários carregados de:', endpoint);
-            break;
-          }
-        } catch {
-          continue;
+      const endpoint = `${this.apiUrl}/?route=user&action=pesquisarUtilizadores&q=a`;
+      try {
+        const response: any = await firstValueFrom(this.http.get(endpoint, this.getHeaders()));
+        if (response.success && Array.isArray(response.data)) {
+          usersData = response.data;
+          console.log('📦 Usuários carregados de:', endpoint);
+        } else if (Array.isArray(response)) {
+          usersData = response;
         }
+      } catch (err: any) {
+        console.error('❌ Erro ao carregar usuários:', err.error?.message || err.message);
       }
       
       if (usersData.length > 0) {
-        this.users = usersData.map((user: any) => ({
-          id: user.id?.toString() || '',
-          name: user.name || user.nome || user.username || '',
-          handle: user.handle || `@${(user.username || user.nome || user.name || '').toLowerCase().replace(/\s/g, '')}`,
-          avatar: this.normalizeUrl(user.avatar || user.foto_perfil, "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E"),
-          bio: user.bio || '',
-          privacy: user.privacy === 'private' ? 'private' : 'public'
-        }));
+        this.users = usersData
+          .filter((user: any) => user.id?.toString() !== this.currentUser.id)
+          .map((user: any) => ({
+            id: user.id?.toString() || '',
+            name: user.name || user.nome || user.username || '',
+            handle: user.handle || `@${(user.username || user.nome || user.name || '').toLowerCase().replace(/\s/g, '')}`,
+            avatar: this.normalizeUrl(user.avatar || user.foto_perfil, this.defaultAvatar),
+            bio: user.bio || '',
+            privacy: user.privacy === 'private' ? 'private' : 'public'
+          }));
         
         console.log('✅ Usuários carregados:', this.users.length);
       } else {
@@ -176,7 +164,7 @@ export class AmigosComponent implements OnInit {
     try {
       const query = encodeURIComponent(this.searchTerm.trim());
       const url = `${this.apiUrl}/?route=user&action=pesquisarUtilizadores&q=${query}`;
-      const response: any = await this.http.get(url, this.getHeaders()).toPromise();
+      const response: any = await firstValueFrom(this.http.get(url, this.getHeaders()));
       
       console.log('📦 Resultados da pesquisa:', response);
       
@@ -194,7 +182,7 @@ export class AmigosComponent implements OnInit {
           id: user.id?.toString() || '',
           name: user.name || user.username || '',
           handle: user.handle || `@${(user.name || '').toLowerCase().replace(/\s/g, '')}`,
-          avatar: this.normalizeUrl(user.avatar || user.foto_perfil, "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E"),
+          avatar: this.normalizeUrl(user.avatar || user.foto_perfil, this.defaultAvatar),
           bio: user.bio || '',
           privacy: user.privacy === 'private' ? 'private' : 'public'
         }));
@@ -203,7 +191,6 @@ export class AmigosComponent implements OnInit {
       }
     } catch (error) {
       console.error('❌ Erro na pesquisa:', error);
-      // Fallback para busca local
       this.filteredUsers = this.users.filter(user => 
         user.name.toLowerCase().includes(this.searchTerm.toLowerCase()) || 
         user.handle.toLowerCase().includes(this.searchTerm.toLowerCase())

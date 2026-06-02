@@ -64,7 +64,7 @@ export class ExplorarComponent implements OnInit {
     }
 
     this.postService.posts$.subscribe(posts => {
-      const activePosts = posts.filter(p => !p.eliminado);
+      const activePosts = posts.filter(p => !p.eliminado && (p.image || p.video));
       this.trendingPosts = [...activePosts].sort((a, b) => b.bazes - a.bazes).slice(0, 12);
     });
   }

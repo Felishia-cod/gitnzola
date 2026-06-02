@@ -114,27 +114,34 @@
 
   <!-- POSTS DO USUÁRIO -->
   <div class="user-posts">
-    <h3 class="posts-title">Meus Posts</h3>
-    <div *ngIf="userPosts.length === 0" class="posts-placeholder">
-      <p>Nenhum post publicado ainda.</p>
+    <h3 class="posts-title">{{ isOwnProfile ? 'Meus Posts' : 'Posts' }}</h3>
+
+    <div *ngIf="!isOwnProfile && privacyStatus === 'private'" class="posts-placeholder">
+      <p>🔒 Este perfil é privado. Apenas amigos podem ver os posts.</p>
     </div>
-    <div class="posts-list" *ngIf="userPosts.length > 0">
-      <div class="user-post-card" *ngFor="let post of userPosts" (click)="openPostModal(post)">
-        <div class="post-header">
-          <img [src]="post.userAvatar" class="post-avatar">
-          <div class="post-info">
-            <span class="post-name">{{ post.userName }}</span>
-            <span class="post-time">{{ post.time }}</span>
+
+    <div *ngIf="isOwnProfile || privacyStatus === 'public'">
+      <div *ngIf="userPosts.length === 0" class="posts-placeholder">
+        <p>{{ isOwnProfile ? 'Nenhum post publicado ainda.' : 'Este utilizador ainda não publicou nada.' }}</p>
+      </div>
+      <div class="posts-list" *ngIf="userPosts.length > 0">
+        <div class="user-post-card" *ngFor="let post of userPosts" (click)="openPostModal(post)">
+          <div class="post-header">
+            <img [src]="post.userAvatar" class="post-avatar">
+            <div class="post-info">
+              <span class="post-name">{{ post.userName }}</span>
+              <span class="post-time">{{ post.time }}</span>
+            </div>
           </div>
-        </div>
-        <p class="post-text">{{ post.text }}</p>
-        
-        <img *ngIf="post.image" [src]="post.image" class="post-image">
-        <video *ngIf="post.video" [src]="post.video" class="post-video" controls></video>
-        
-        <div class="post-stats">
-          <span>❤️ {{ post.bazes }}</span>
-          <span>💬 {{ post.commentsCount }}</span>
+          <p class="post-text">{{ post.text }}</p>
+          
+          <img *ngIf="post.image" [src]="post.image" class="post-image">
+          <video *ngIf="post.video" [src]="post.video" class="post-video" controls></video>
+          
+          <div class="post-stats">
+            <span>❤️ {{ post.bazes }}</span>
+            <span>💬 {{ post.commentsCount }}</span>
+          </div>
         </div>
       </div>
     </div>

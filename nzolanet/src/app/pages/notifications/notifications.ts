@@ -129,14 +129,20 @@ export class NotificationsComponent implements OnInit, OnDestroy {
       const date = new Date(dateString);
       const now = new Date();
       const diff = now.getTime() - date.getTime();
+      const hh = String(date.getHours()).padStart(2, '0');
+      const mm = String(date.getMinutes()).padStart(2, '0');
+      const timeStr = `${hh}:${mm}`;
+
       const minutes = Math.floor(diff / 60000);
       const hours = Math.floor(minutes / 60);
       const days = Math.floor(hours / 24);
 
-      if (minutes < 1) return 'agora';
-      if (minutes < 60) return `há ${minutes} ${minutes === 1 ? 'min' : 'mins'}`;
-      if (hours < 24) return `há ${hours} ${hours === 1 ? 'h' : 'hs'}`;
-      return `há ${days} ${days === 1 ? 'dia' : 'dias'}`;
+      if (minutes < 1) return `${timeStr}`;
+      if (minutes < 60) return `${timeStr}`;
+      if (hours < 24) return `${timeStr}`;
+      if (days === 1) return `Ontem às ${timeStr}`;
+      if (days < 7) return `há ${days} dias`;
+      return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')} ${timeStr}`;
     } catch (e) {
       return 'agora';
     }

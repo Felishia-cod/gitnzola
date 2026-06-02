@@ -64,8 +64,8 @@
     <div class="posts-list">
       <article class="post-card" *ngFor="let post of filteredPosts">
         <div class="post-header">
-          <div class="post-user">
-            <img [src]="post.userAvatar" class="avatar-post">
+          <div class="post-user" (click)="goToProfile(post.userId)" style="cursor:pointer">
+            <img [src]="post.userAvatar" (error)="onImgError($event)" class="avatar-post">
             <div class="user-info">
               <span class="user-name">{{ post.userName }}</span>
               <span class="user-handle">{{ post.userHandle }} · {{ post.time }}</span>
@@ -90,28 +90,34 @@
         <div *ngIf="post.isEditing" class="edit-post">
           <textarea [(ngModel)]="post.editText" class="edit-post-input" rows="3"></textarea>
           <div class="edit-post-actions">
-            <button class="edit-save-btn" (click)="saveEditPost(post)">
+            <button class="edit-save-btn" (click)="saveEditPost(post)" [disabled]="editingPostId === post.id">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" width="16" height="16">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
               </svg>
-              Guardar
+              {{ editingPostId === post.id ? 'A guardar...' : 'Guardar' }}
             </button>
-            <button class="edit-cancel-btn" (click)="cancelEditPost(post)">✕ Cancelar</button>
+            <button class="edit-cancel-btn" (click)="cancelEditPost(post)" [disabled]="editingPostId === post.id">✕ Cancelar</button>
           </div>
         </div>
         
         <div class="post-body" *ngIf="!post.isEditing">
           <p class="post-text">{{ post.text }}</p>
-          <img *ngIf="post.image" [src]="post.image" class="post-image">
+          <img *ngIf="post.image" [src]="post.image" (error)="onImgError($event)" class="post-image">
           <video *ngIf="post.video" [src]="post.video" class="post-video" controls></video>
         </div>
         
         <div class="post-actions">
-          <button class="action-btn" (click)="toggleBaze(post.id)" [class.liked]="post.liked">
+          <button class="action-btn" (click)="toggleBaze(post.id)" [class.liked]="post.liked"
+            (mouseenter)="loadBazeUsers(post.id)" (mouseleave)="hideBazeTooltip()">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"></path>
             </svg>
             {{ post.bazes }} <span>baze</span>
+            <div class="baze-tooltip" *ngIf="hoveredBazePost === post.id && bazeUsers[post.id]?.length">
+              <div class="baze-tooltip-item" *ngFor="let user of bazeUsers[post.id]">
+                {{ user.name }} <span class="baze-tooltip-handle">{{ user.handle }}</span>
+              </div>
+            </div>
           </button>
           <button class="action-btn" (click)="toggleComments(post.id)">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -139,7 +145,7 @@
         <div class="comments-section" *ngIf="post.showComments">
           <div class="comments-list">
             <div class="comment-item" *ngFor="let comment of post.comments">
-              <img [src]="comment.userAvatar" class="comment-avatar">
+              <img [src]="comment.userAvatar" (error)="onImgError($event)" class="comment-avatar">
               <div class="comment-content">
                 <div class="comment-header">
                   <span class="comment-name">{{ comment.userName }}</span>
@@ -178,7 +184,7 @@
                 
                 <div class="replies-list" *ngIf="comment.replies.length > 0">
                   <div class="reply-item" *ngFor="let reply of comment.replies">
-                    <img [src]="reply.userAvatar" class="reply-avatar">
+                    <img [src]="reply.userAvatar" (error)="onImgError($event)" class="reply-avatar">
                     <div class="reply-content">
                       <div class="reply-header">
                         <span class="reply-name">{{ reply.userName }}</span>
@@ -277,7 +283,7 @@
     </div>
     <div class="report-modal-footer">
       <button class="report-cancel-btn" (click)="closeReportModal()">Cancelar</button>
-      <button class="report-submit-btn" (click)="submitReport()">Enviar Denúncia</button>
+      <button class="report-submit-btn" (click)="submitReport()" [disabled]="isReporting">{{ isReporting ? 'A enviar...' : 'Enviar Denúncia' }}</button>
     </div>
   </div>
 </div>
@@ -338,7 +344,7 @@
     </div>
     <div class="modal-footer">
       <button class="modal-btn modal-btn-secondary" (click)="closeConfirmModal()">Cancelar</button>
-      <button class="modal-btn modal-btn-danger" (click)="confirmAction()">Confirmar</button>
+      <button class="modal-btn modal-btn-danger" (click)="confirmAction()" [disabled]="isDeleting">{{ isDeleting ? 'A eliminar...' : 'Confirmar' }}</button>
     </div>
   </div>
 </div>

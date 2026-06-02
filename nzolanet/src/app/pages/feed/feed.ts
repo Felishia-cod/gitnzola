@@ -1,9 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterOutlet, RouterLink, RouterLinkActive, Router } from '@angular/router';
+import { Subscription } from 'rxjs';
 import { UserService, UserData } from '../../services/user';
 import { PostService, Post } from '../../services/post';
+import { NotificationService } from '../../services/notification';
+import { FollowService } from '../../services/follow';
 
 @Component({
   selector: 'app-feed',
@@ -12,7 +15,7 @@ import { PostService, Post } from '../../services/post';
   templateUrl: './feed.html',
   styleUrls: ['./feed.scss']
 })
-export class FeedComponent implements OnInit {
+export class FeedComponent implements OnInit, OnDestroy {
   incomingCount: number = 0;
   userAvatar: string = '';
   
@@ -29,6 +32,8 @@ export class FeedComponent implements OnInit {
   
   allUsers: any[] = [];
   
+  private notifSubscription: Subscription | null = null;
+
   showPostModal: boolean = false;
   composer: string = '';
   selectedImage: string | null = null;
@@ -63,6 +68,8 @@ export class FeedComponent implements OnInit {
   constructor(
     private userService: UserService,
     private postService: PostService,
+    private notificationService: NotificationService,
+    private followService: FollowService,
     private router: Router
   ) {}
 
@@ -81,13 +88,17 @@ export class FeedComponent implements OnInit {
     }
     
     this.initUsersList();
-    this.loadIncomingRequestsCount();
     
-    window.addEventListener('storage', (event) => {
-      if (event.key === 'incomingRequests') {
-        this.loadIncomingRequestsCount();
-      }
+    await this.loadNotificationCount();
+    this.notifSubscription = this.notificationService.unreadCount$.subscribe(count => {
+      this.incomingCount = count;
     });
+  }
+
+  ngOnDestroy() {
+    if (this.notifSubscription) {
+      this.notifSubscription.unsubscribe();
+    }
   }
 
   private setMe(userData: UserData) {
@@ -166,16 +177,13 @@ export class FeedComponent implements OnInit {
     this.router.navigate(['/feed/explorar'], { queryParams: { q: hashtag } });
   }
   
-  loadIncomingRequestsCount() {
-    const savedIncoming = localStorage.getItem('incomingRequests');
-    if (savedIncoming) {
-      const incoming = JSON.parse(savedIncoming);
-      this.incomingCount = incoming.length;
-    } else {
-      const initialRequests = ['u2', 'u4'];
-      localStorage.setItem('incomingRequests', JSON.stringify(initialRequests));
-      this.incomingCount = initialRequests.length;
-    }
+  private async loadNotificationCount() {
+    const pedidos = await this.followService.getPedidosPendentes();
+    const pedidosCount = pedidos.length;
+    await this.notificationService.loadNotifications();
+    const notifs = this.notificationService.getNotifications();
+    const unreadNotifs = notifs.filter(n => !n.lida).length;
+    this.incomingCount = unreadNotifs + pedidosCount;
   }
 
   openPostModal() {

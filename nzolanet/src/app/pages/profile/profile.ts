@@ -118,6 +118,7 @@ export class ProfileComponent implements OnInit, OnDestroy {
           console.log('📢 Atualização do UserService:', user.name);
           this.setCurrentUser(user);
           this.isLoading = false;
+          this.loadMyPosts();
           this.cdr.detectChanges();
         }
       });
@@ -138,7 +139,10 @@ export class ProfileComponent implements OnInit, OnDestroy {
         }
       }, 8000);
 
-      // 5. Carregar posts
+      // 5. Carregar posts próprios via API dedicada (para ver mesmo com perfil privado)
+      if (currentUserData) {
+        await this.loadMyPosts();
+      }
       this.postsSubscription = this.postService.posts$.subscribe(posts => {
         if (this.currentUser?.id) {
           this.userPosts = posts.filter(p => p.userId === this.currentUser!.id && !p.eliminado);
@@ -149,6 +153,20 @@ export class ProfileComponent implements OnInit, OnDestroy {
           this.cdr.detectChanges();
         }
       });
+    }
+  }
+
+  private async loadMyPosts() {
+    if (!this.currentUser) return;
+    const posts = await this.postService.getUserPosts(this.currentUser.id);
+    const myPosts = posts.filter(p => !p.eliminado);
+    if (myPosts.length > 0) {
+      this.userPosts = myPosts;
+      this.fillPostUserNames(this.currentUser);
+      if (this.currentUser) {
+        this.currentUser.postsCount = this.userPosts.length;
+      }
+      this.cdr.detectChanges();
     }
   }
 

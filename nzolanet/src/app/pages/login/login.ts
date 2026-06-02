@@ -74,7 +74,6 @@ export class LoginComponent {
             this.userService.setUser(user);
           }
           await this.postService.refreshPosts();
-          alert('Login efetuado com sucesso!');
           if (user?.is_admin) {
             this.router.navigate(['/admin']);
           } else {

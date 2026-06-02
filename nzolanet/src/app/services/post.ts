@@ -58,6 +58,7 @@ export class PostService {
   private apiUrl = 'https://nzolanet-back.onrender.com';
   private postsSubject = new BehaviorSubject<Post[]>([]);
   public posts$ = this.postsSubject.asObservable();
+  private localLikedState = new Map<string, boolean>();
 
   constructor(
     private http: HttpClient,
@@ -68,11 +69,18 @@ export class PostService {
 
   private normalizeUrl(url: string | null | undefined, fallback: string = ''): string {
     if (!url) return fallback;
+    if (url.startsWith('data:')) return url;
     if (url.includes('localhost')) {
       return url.replace(/https?:\/\/localhost:\d+\/NzolaNet\/backend/g, this.apiUrl);
     }
     if (url.startsWith('/NzolaNet/backend')) {
       return this.apiUrl + url.replace('/NzolaNet/backend', '');
+    }
+    if (url.startsWith('/uploads/') || url.startsWith('/media/')) {
+      return this.apiUrl + url;
+    }
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      return this.apiUrl + '/' + url.replace(/^[\/]*/, '');
     }
     return url;
   }
@@ -116,7 +124,9 @@ export class PostService {
       bazes: backend.total_bazes || 0,
       comments: [],
       commentsCount: backend.total_comentarios || 0,
-      liked: backend.user_liked || false,
+      liked: this.localLikedState.has(backend.id?.toString())
+        ? this.localLikedState.get(backend.id.toString())!
+        : !!(backend.user_liked || backend.liked || backend.has_liked),
       saved: false,
       showComments: false,
       newCommentText: '',
@@ -126,23 +136,25 @@ export class PostService {
 
   private mapComments(backend: any[]): Comment[] {
     if (!backend || !Array.isArray(backend)) return [];
-    return backend.map((c: any) => ({
-      id: (c.id || '').toString(),
-      userId: (c.user_id || c.userId || '').toString(),
-      userName: c.autor_nome || c.user_name || c.nome || c.name || c.display_name || c.full_name || c.username || '',
-      userHandle: c.autor_username || c.username
-        ? `@${c.autor_username || c.username}`
-        : `@${(c.autor_nome || c.nome || c.name || c.display_name || c.full_name || '').toLowerCase().replace(/\s/g, '')}`,
-      userAvatar: this.normalizeUrl(c.autor_foto_perfil || c.user_avatar || c.foto_perfil || c.avatar || c.foto || c.profile_picture, DEFAULT_AVATAR),
-      text: c.conteudo || c.text || '',
-      time: this.formatTime(c.criado_em),
-      likes: 0,
-      likedByUser: false,
-      replies: [],
-      eliminado: c.eliminado || false,
-      removido_por_admin: c.removido_por_admin || false,
-      post_id: c.post_id
-    }));
+    return backend.map((c: any) => {
+      const userName = c.autor_nome || c.user_name || c.nome || c.name || c.display_name || c.full_name || c.username || c.autor_username || '';
+      const username = c.autor_username || c.username || '';
+      return {
+        id: (c.id || '').toString(),
+        userId: (c.user_id || c.userId || '').toString(),
+        userName: userName,
+        userHandle: username ? `@${username}` : `@${(userName || '').toLowerCase().replace(/\s/g, '')}`,
+        userAvatar: this.normalizeUrl(c.autor_foto_perfil || c.user_avatar || c.foto_perfil || c.avatar || c.foto || c.profile_picture, DEFAULT_AVATAR),
+        text: c.conteudo || c.text || '',
+        time: this.formatTime(c.criado_em),
+        likes: c.total_likes || 0,
+        likedByUser: c.user_liked || false,
+        replies: [],
+        eliminado: c.eliminado || false,
+        removido_por_admin: c.removido_por_admin || false,
+        post_id: c.post_id
+      };
+    });
   }
 
   async loadPostsFromAPI(): Promise<void> {
@@ -276,6 +288,24 @@ export class PostService {
     }
   }
 
+  async editPost(postId: string, conteudo: string): Promise<any> {
+    const token = this.auth.getToken();
+    if (!token) return { success: false, message: 'Não autenticado' };
+
+    try {
+      const response: any = await firstValueFrom(
+        this.http.put(
+          `${this.apiUrl}/?route=post&action=editar`,
+          { id: postId, conteudo },
+          this.getHeaders()
+        )
+      );
+      return response;
+    } catch (error: any) {
+      return { success: false, message: error.error?.message || 'Erro ao editar publicação' };
+    }
+  }
+
   async likePost(postId: string): Promise<any> {
     const token = this.auth.getToken();
     if (!token) return { success: false };
@@ -290,7 +320,8 @@ export class PostService {
       );
       return response;
     } catch (error: any) {
-      return { success: false };
+      const msg = error.error?.message || error.error?.erro || '';
+      return { success: false, message: msg, alreadyProcessed: msg.toLowerCase().includes('já') || msg.toLowerCase().includes('already') };
     }
   }
 
@@ -307,7 +338,30 @@ export class PostService {
       );
       return response;
     } catch (error: any) {
-      return { success: false };
+      const msg = error.error?.message || error.error?.erro || '';
+      return { success: false, message: msg, alreadyProcessed: msg.toLowerCase().includes('não') || msg.toLowerCase().includes('not found') || msg.toLowerCase().includes('inexistente') };
+    }
+  }
+
+  async getBazeUsers(postId: string): Promise<{ name: string; handle: string }[]> {
+    const token = this.auth.getToken();
+    if (!token) return [];
+    try {
+      const response: any = await firstValueFrom(
+        this.http.get(
+          `${this.apiUrl}/?route=baze&action=listar&post_id=${postId}`,
+          this.getHeaders()
+        )
+      );
+      if (response.success && Array.isArray(response.data)) {
+        return response.data.map((u: any) => ({
+          name: u.autor_nome || u.nome || u.name || u.username || 'Alguém',
+          handle: u.autor_username || u.username || ''
+        }));
+      }
+      return [];
+    } catch {
+      return [];
     }
   }
 
@@ -468,15 +522,20 @@ export class PostService {
       const date = new Date(dateString);
       const now = new Date();
       const diff = now.getTime() - date.getTime();
+      const hh = String(date.getHours()).padStart(2, '0');
+      const mm = String(date.getMinutes()).padStart(2, '0');
+      const timeStr = `${hh}:${mm}`;
 
       const minutes = Math.floor(diff / 60000);
       const hours = Math.floor(minutes / 60);
       const days = Math.floor(hours / 24);
 
-      if (minutes < 1) return 'agora';
-      if (minutes < 60) return `há ${minutes} ${minutes === 1 ? 'min' : 'mins'}`;
-      if (hours < 24) return `há ${hours} ${hours === 1 ? 'h' : 'hs'}`;
-      return `há ${days} ${days === 1 ? 'dia' : 'dias'}`;
+      if (minutes < 1) return `${timeStr}`;
+      if (minutes < 60) return `${timeStr}`;
+      if (hours < 24) return `${timeStr}`;
+      if (days === 1) return `Ontem às ${timeStr}`;
+      if (days < 7) return `há ${days} dias`;
+      return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')} ${timeStr}`;
     } catch (e) {
       return 'agora';
     }
@@ -501,5 +560,9 @@ export class PostService {
 
   clearPosts(): void {
     this.postsSubject.next([]);
+  }
+
+  setLikedState(postId: string, liked: boolean): void {
+    this.localLikedState.set(postId, liked);
   }
 }

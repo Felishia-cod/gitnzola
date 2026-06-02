@@ -484,6 +484,36 @@
   stroke: var(--primary);
 }
 
+.action-btn {
+  position: relative;
+}
+
+.baze-tooltip {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  padding: 0.375rem 0.5rem;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  z-index: 50;
+  min-width: 120px;
+  white-space: nowrap;
+}
+
+.baze-tooltip-item {
+  font-size: 0.7rem;
+  color: var(--foreground);
+  padding: 0.125rem 0;
+}
+
+.baze-tooltip-handle {
+  color: var(--muted-foreground);
+  font-size: 0.6rem;
+}
+
 // Botão Guardar Post
 .save-post-btn.saved svg {
   fill: var(--primary);

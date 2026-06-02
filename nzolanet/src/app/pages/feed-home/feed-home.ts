@@ -24,7 +24,10 @@ export class HomeComponent implements OnInit, OnDestroy {
   selectedVideoFile: File | null = null;
   showEmojiPicker: boolean = false;
   savedPosts: Post[] = [];
-  isPublishing: boolean = false; // Estado de loading para o botão publicar
+  isPublishing: boolean = false;
+  isDeleting: boolean = false;
+  isReporting: boolean = false;
+  editingPostId: string = '';
   
   showReportModal: boolean = false;
   reportTargetType: 'post' | 'comment' = 'post';
@@ -43,6 +46,9 @@ export class HomeComponent implements OnInit, OnDestroy {
   confirmTitle: string = '';
   confirmMessage: string = '';
   confirmCallback: (() => void) | null = null;
+
+  bazeUsers: { [postId: string]: { name: string; handle: string }[] } = {};
+  hoveredBazePost: string = '';
   
   currentUser: UserData = {
     id: '',
@@ -128,7 +134,8 @@ export class HomeComponent implements OnInit, OnDestroy {
       this.loadSavedPosts();
     });
 
-    this.loadSuggestions();
+    await this.loadSuggestions();
+    this.cdr.detectChanges();
 
     // Atualizar timestamps a cada minuto
     setInterval(() => {
@@ -144,6 +151,10 @@ export class HomeComponent implements OnInit, OnDestroy {
       handle: userData.handle,
       avatar: userData.avatar || this.getDefaultAvatar()
     };
+  }
+
+  goToProfile(userId: string) {
+    this.router.navigate(['/feed/perfil', userId]);
   }
 
   ngOnDestroy() {
@@ -167,6 +178,11 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
+  onImgError(event: Event) {
+    const el = event.target as HTMLElement;
+    el.style.display = 'none';
+  }
+
   private getDefaultAvatar(): string {
     return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E";
   }
@@ -180,23 +196,24 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
   
   formatTime(timestamp: number): string {
-    const now = Date.now();
-    const diff = now - timestamp;
-    
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const hh = String(date.getHours()).padStart(2, '0');
+    const mm = String(date.getMinutes()).padStart(2, '0');
+    const timeStr = `${hh}:${mm}`;
+
     const seconds = Math.floor(diff / 1000);
     const minutes = Math.floor(seconds / 60);
     const hours = Math.floor(minutes / 60);
     const days = Math.floor(hours / 24);
-    
-    if (seconds < 60) {
-      return 'agora';
-    } else if (minutes < 60) {
-      return `há ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`;
-    } else if (hours < 24) {
-      return `há ${hours} ${hours === 1 ? 'hora' : 'horas'}`;
-    } else {
-      return `há ${days} ${days === 1 ? 'dia' : 'dias'}`;
-    }
+
+    if (seconds < 60) return `${timeStr}`;
+    if (minutes < 60) return `${timeStr}`;
+    if (hours < 24) return `${timeStr}`;
+    if (days === 1) return `Ontem às ${timeStr}`;
+    if (days < 7) return `há ${days} dias`;
+    return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')} ${timeStr}`;
   }
   
   private loadFollowingUsers() {
@@ -240,6 +257,14 @@ export class HomeComponent implements OnInit, OnDestroy {
     } catch (error) {
       this.suggestions = [];
     }
+    if (this.suggestions.length === 0) {
+      this.suggestions = [
+        { id: 4, name: 'João Silva', handle: '@joaosilva', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=100' },
+        { id: 5, name: 'Maria Santos', handle: '@marias', avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100' },
+        { id: 6, name: 'Paulo Mendes', handle: '@paulom', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=100' }
+      ];
+    }
+    this.cdr.detectChanges();
   }
   
   async sendFriendRequest(userId: number) {
@@ -329,20 +354,16 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   async submitReport() {
-    if (!this.reportMotivo) {
-      this.showAlert('Erro', 'Por favor, seleccione um motivo para a denúncia.', 'error');
-      return;
-    }
-    
+    if (!this.reportMotivo || this.isReporting) return;
+    this.isReporting = true;
     const result = await this.postService.submitReport({
       referencia_tipo: this.reportTargetType,
       referencia_id: this.reportTargetId,
       motivo: this.reportMotivo,
       descricao: this.reportDescricao
     });
-    
+    this.isReporting = false;
     if (result?.success) {
-      this.showAlert('Denúncia Enviada', 'A sua denúncia foi registada com sucesso.', 'success');
       this.closeReportModal();
     } else {
       this.showAlert('Erro', result?.message || 'Erro ao enviar denúncia', 'error');
@@ -364,13 +385,18 @@ export class HomeComponent implements OnInit, OnDestroy {
     post.showMenu = false;
   }
 
-  saveEditPost(post: Post) {
-    if (post.editText?.trim()) {
+  async saveEditPost(post: Post) {
+    if (!post.editText?.trim() || this.editingPostId === post.id) return;
+    this.editingPostId = post.id;
+    const result = await this.postService.editPost(post.id, post.editText);
+    this.editingPostId = '';
+    if (result?.success) {
       post.text = post.editText;
       post.isEditing = false;
       post.editText = '';
       this.postService.updatePost(post);
-      this.showAlert('Sucesso', 'Publicação editada com sucesso!', 'success');
+    } else {
+      this.showAlert('Erro', result?.message || 'Erro ao editar publicação', 'error');
     }
   }
 
@@ -380,13 +406,16 @@ export class HomeComponent implements OnInit, OnDestroy {
   }
 
   async deletePost(postId: string) {
+    if (this.isDeleting) return;
     this.showConfirm('Eliminar Publicação', 'Tem certeza que deseja eliminar esta publicação?', async () => {
+      if (this.isDeleting) return;
+      this.isDeleting = true;
       const result = await this.postService.deletePost(postId);
+      this.isDeleting = false;
       if (result?.success) {
         this.filteredPosts = this.filteredPosts.filter(p => p.id !== postId);
         this.savedPosts = this.savedPosts.filter(p => p.id !== postId);
         this.saveToLocalStorage();
-        this.showAlert('Sucesso', 'Publicação eliminada com sucesso!', 'success');
       } else {
         this.showAlert('Erro', result?.message || 'Erro ao eliminar publicação', 'error');
       }
@@ -524,6 +553,17 @@ export class HomeComponent implements OnInit, OnDestroy {
     }
   }
 
+  async loadBazeUsers(postId: string) {
+    if (!this.bazeUsers[postId]) {
+      this.bazeUsers[postId] = await this.postService.getBazeUsers(postId);
+    }
+    this.hoveredBazePost = postId;
+  }
+
+  hideBazeTooltip() {
+    this.hoveredBazePost = '';
+  }
+
   async toggleBaze(postId: string) {
     const post = this.filteredPosts.find(p => p.id === postId);
     if (!post) return;
@@ -539,7 +579,11 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (result?.success === false) {
       post.liked = wasLiked;
       post.bazes += wasLiked ? 1 : -1;
-      this.showAlert('Erro', result?.message || 'Erro ao processar baze', 'error');
+      if (!result?.alreadyProcessed) {
+        this.showAlert('Erro', result?.message || 'Erro ao processar baze', 'error');
+      }
+    } else {
+      this.postService.setLikedState(postId, post.liked);
     }
   }
 
@@ -549,6 +593,30 @@ export class HomeComponent implements OnInit, OnDestroy {
       post.showComments = !post.showComments;
       if (post.showComments && post.comments.length === 0) {
         post.comments = await this.postService.loadCommentsByPost(postId);
+        this.fillCommentUserNames(post);
+      }
+    }
+  }
+
+  private fillCommentUserNames(post: Post) {
+    for (const comment of post.comments) {
+      if (!comment.userName && comment.userHandle) {
+        if (comment.userId === this.me.id && this.me.name) {
+          comment.userName = this.me.name;
+        } else {
+          comment.userName = comment.userHandle.replace('@', '');
+        }
+      }
+      if (comment.replies) {
+        for (const reply of comment.replies) {
+          if (!reply.userName && reply.userHandle) {
+            if (reply.userId === this.me.id && this.me.name) {
+              reply.userName = this.me.name;
+            } else {
+              reply.userName = reply.userHandle.replace('@', '');
+            }
+          }
+        }
       }
     }
   }
@@ -560,6 +628,7 @@ export class HomeComponent implements OnInit, OnDestroy {
       if (result?.success) {
         post.newCommentText = '';
         post.comments = await this.postService.loadCommentsByPost(postId);
+        this.fillCommentUserNames(post);
         post.commentsCount = post.comments.length;
       } else {
         this.showAlert('Erro', result?.message || 'Erro ao adicionar comentário', 'error');
