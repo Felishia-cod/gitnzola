@@ -58,7 +58,7 @@
     <h2 class="section-title">Atividade recente</h2>
     
     <ul class="activities-list">
-      <li *ngFor="let activity of recentActivities" class="activity-item">
+      <li *ngFor="let activity of recentActivities" class="activity-item" (click)="navigateToActivity(activity)" [class.clickable]="activity.postId || (activity.type === 'follow' && activity.userId)">
         <div class="activity-icon" [class.baze]="activity.type === 'baze'" [class.comment]="activity.type === 'comment'" [class.follow]="activity.type === 'follow'">
           <svg *ngIf="activity.type === 'baze'" width="16" height="16" viewBox="0 0 24 24" fill="currentColor" stroke="none">
             <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
@@ -77,7 +77,6 @@
           <span class="activity-text">
             <strong>{{ activity.userName }}</strong> {{ activity.action }}
             <span *ngIf="activity.comment" class="activity-comment">"{{ activity.comment }}"</span>
-            <a routerLink="/feed" class="activity-link" *ngIf="activity.postId">Ver</a>
           </span>
           <span class="activity-time">{{ activity.time }}</span>
         </div>

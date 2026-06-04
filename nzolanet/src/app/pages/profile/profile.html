@@ -1,8 +1,8 @@
 <div *ngIf="currentUser" class="perfil-container">
   <!-- CARD DO PERFIL -->
   <div class="profile-card">
-    <div class="cover-image" [style.backgroundImage]="coverImage ? 'url(' + coverImage + ')' : 'var(--gradient-hero)'" (click)="openCoverUpload()">
-      <div class="cover-overlay">
+    <div class="cover-image" [style.backgroundImage]="coverImage ? 'url(' + coverImage + ')' : 'var(--gradient-hero)'" (click)="isOwnProfile ? openCoverUpload() : null">
+      <div class="cover-overlay" *ngIf="isOwnProfile">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M17 3l4 4-7 7H10v-4l7-7z"/>
           <path d="M4 20h16"/>
@@ -12,9 +12,9 @@
     </div>
     
     <div class="profile-content">
-      <div class="avatar-wrapper" (click)="openAvatarUpload()">
+      <div class="avatar-wrapper" [class.no-click]="!isOwnProfile" (click)="isOwnProfile ? openAvatarUpload() : null">
         <img [src]="currentUser.avatar" class="profile-avatar" alt="Avatar">
-        <div class="avatar-overlay">
+        <div class="avatar-overlay" *ngIf="isOwnProfile">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <path d="M17 3l4 4-7 7H10v-4l7-7z"/>
             <path d="M4 20h16"/>
@@ -96,16 +96,29 @@
     </div>
   </div>
 
-  <!-- PRIVACIDADE -->
-  <div class="privacy-section">
+  <!-- PRIVACIDADE (só para o próprio perfil) -->
+  <div class="privacy-section" *ngIf="isOwnProfile">
     <h3>Quem pode ver o teu perfil</h3>
     <div class="privacy-options">
       <div class="option" [class.active]="privacyStatus === 'public'" (click)="setPrivacy('public')">
-        <h4>🌍 Público</h4>
+        <h4>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px">
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          Público
+        </h4>
         <p>Qualquer pessoa pode ver os teus posts e perfil</p>
       </div>
       <div class="option" [class.active]="privacyStatus === 'private'" (click)="setPrivacy('private')">
-        <h4>🔒 Privado</h4>
+        <h4>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>
+          Privado
+        </h4>
         <p>Só os teus amigos podem ver os teus posts.</p>
       </div>
     </div>
@@ -125,22 +138,65 @@
         <p>{{ isOwnProfile ? 'Nenhum post publicado ainda.' : 'Este utilizador ainda não publicou nada.' }}</p>
       </div>
       <div class="posts-list" *ngIf="userPosts.length > 0">
-        <div class="user-post-card" *ngFor="let post of userPosts" (click)="openPostModal(post)">
-          <div class="post-header">
-            <img [src]="post.userAvatar" class="post-avatar">
-            <div class="post-info">
-              <span class="post-name">{{ post.userName }}</span>
-              <span class="post-time">{{ post.time }}</span>
+        <div class="user-post-card" *ngFor="let post of userPosts">
+          <div class="post-header-row">
+            <div class="post-header" (click)="openPostModal(post)">
+              <img [src]="post.userAvatar" class="post-avatar">
+              <div class="post-info">
+                <span class="post-name">{{ post.userName }}</span>
+                <span class="post-time">{{ post.time }}</span>
+              </div>
+            </div>
+            <div class="post-menu-container" *ngIf="isOwnProfile">
+              <button class="post-menu-btn" (click)="toggleMenu(post); $event.stopPropagation()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="1"/>
+                  <circle cx="19" cy="12" r="1"/>
+                  <circle cx="5" cy="12" r="1"/>
+                </svg>
+              </button>
+              <div class="post-menu-dropdown" *ngIf="post.showMenu" (click)="$event.stopPropagation()">
+                <button (click)="editPost(post)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3l4 4-7 7H10v-4l7-7z"/><path d="M4 20h16"/></svg>
+                  Editar
+                </button>
+                <button (click)="deletePost(post.id)">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                  Eliminar
+                </button>
+              </div>
             </div>
           </div>
-          <p class="post-text">{{ post.text }}</p>
           
-          <img *ngIf="post.image" [src]="post.image" class="post-image">
-          <video *ngIf="post.video" [src]="post.video" class="post-video" controls></video>
+          <div *ngIf="post.isEditing" class="profile-edit-post">
+            <textarea [(ngModel)]="post.editText" class="profile-edit-input" rows="3" (click)="$event.stopPropagation()"></textarea>
+            <div class="profile-edit-actions">
+              <button class="profile-edit-save-btn" (click)="saveEditPost(post); $event.stopPropagation()" [disabled]="editingPostId === post.id">
+                {{ editingPostId === post.id ? 'A guardar...' : 'Guardar' }}
+              </button>
+              <button class="profile-edit-cancel-btn" (click)="cancelEditPost(post); $event.stopPropagation()">Cancelar</button>
+            </div>
+          </div>
           
-          <div class="post-stats">
-            <span>❤️ {{ post.bazes }}</span>
-            <span>💬 {{ post.commentsCount }}</span>
+          <div (click)="openPostModal(post)" *ngIf="!post.isEditing">
+            <p class="post-text">{{ post.text }}</p>
+            <img *ngIf="post.image" [src]="post.image" class="post-image">
+            <video *ngIf="post.video" [src]="post.video" class="post-video" controls></video>
+            
+            <div class="post-stats">
+              <button class="post-baze-btn" [class.liked]="post.liked" (click)="toggleBaze(post); $event.stopPropagation()">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                </svg>
+                {{ post.bazes }}
+              </button>
+              <span>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:2px">
+                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                </svg>
+                {{ post.commentsCount }}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -174,8 +230,18 @@
         <video *ngIf="selectedPost.video" [src]="selectedPost.video" class="modal-post-video" controls></video>
         
         <div class="modal-post-stats">
-          <span>❤️ {{ selectedPost.bazes }} baze</span>
-          <span>💬 {{ selectedPost.commentsCount }} comentários</span>
+          <button class="modal-baze-btn" [class.liked]="selectedPost.liked" (click)="toggleBaze(selectedPost)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+            </svg>
+            {{ selectedPost.bazes }} baze
+          </button>
+          <span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:2px">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            {{ selectedPost.commentsCount }} comentários
+          </span>
         </div>
         
         <div class="modal-comments-section">
@@ -186,12 +252,16 @@
               <div class="modal-comment-content">
                 <div class="modal-comment-header">
                   <span class="modal-comment-name">{{ comment.userName }}</span>
+                  <span class="modal-comment-handle">{{ comment.userHandle }}</span>
                   <span class="modal-comment-time">{{ comment.time }}</span>
                 </div>
                 <p class="modal-comment-text">{{ comment.text }}</p>
                 <div class="modal-comment-actions">
                   <button class="modal-comment-like" (click)="likePostComment(comment.id)">
-                    ❤️ {{ comment.likes }}
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:2px">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                    {{ comment.likes }}
                   </button>
                 </div>
               </div>
@@ -329,6 +399,67 @@
         <button class="edit-cancel-btn" (click)="closeEditModal()">Cancelar</button>
         <button class="edit-save-btn" (click)="saveProfile()">Guardar</button>
       </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE ALERTA -->
+<div class="modal-overlay" *ngIf="showAlertModal" (click)="closeAlertModal()">
+  <div class="modal-content modal-{{ alertType }}" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-icon">
+        <svg *ngIf="alertType === 'error'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="8" x2="12" y2="12"/>
+          <line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        <svg *ngIf="alertType === 'success'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+          <polyline points="22 4 12 14.01 9 11.01"/>
+        </svg>
+        <svg *ngIf="alertType === 'warning'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 9v4"/>
+          <path d="M12 17h.01"/>
+          <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/>
+        </svg>
+        <svg *ngIf="alertType === 'info'" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="12" y1="16" x2="12" y2="12"/>
+          <line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+      </div>
+      <h3>{{ alertTitle }}</h3>
+      <button class="modal-close" (click)="closeAlertModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>{{ alertMessage }}</p>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-primary" (click)="closeAlertModal()">Entendi</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL DE CONFIRMAÇÃO -->
+<div class="modal-overlay" *ngIf="showConfirmModal" (click)="closeConfirmModal()">
+  <div class="modal-content modal-confirm" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 8v4"/>
+          <path d="M12 16h.01"/>
+        </svg>
+      </div>
+      <h3>{{ confirmTitle }}</h3>
+      <button class="modal-close" (click)="closeConfirmModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>{{ confirmMessage }}</p>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-secondary" (click)="closeConfirmModal()">Cancelar</button>
+      <button class="modal-btn modal-btn-danger" (click)="confirmAction()" [disabled]="isDeleting">{{ isDeleting ? 'A eliminar...' : 'Confirmar' }}</button>
     </div>
   </div>
 </div>

@@ -24,6 +24,8 @@ export class NotificationService {
   public notifications$ = this.notificationsSubject.asObservable();
   private unreadCountSubject = new BehaviorSubject<number>(0);
   public unreadCount$ = this.unreadCountSubject.asObservable();
+  private lastLoadTime: number = 0;
+  private cacheDuration: number = 10000; // 10 segundos
 
   constructor(
     private http: HttpClient,
@@ -40,9 +42,14 @@ export class NotificationService {
     };
   }
 
-  async loadNotifications(page = 1, limit = 50): Promise<void> {
+  async loadNotifications(page = 1, limit = 30): Promise<void> {
     const token = this.auth.getToken();
     if (!token) return;
+
+    const now = Date.now();
+    if (now - this.lastLoadTime < this.cacheDuration && this.notificationsSubject.value.length > 0) {
+      return;
+    }
 
     try {
       const response: any = await firstValueFrom(
@@ -56,6 +63,7 @@ export class NotificationService {
         this.notificationsSubject.next(response.data);
         const unread = response.data.filter((n: NotificationDTO) => !n.lida).length;
         this.unreadCountSubject.next(unread);
+        this.lastLoadTime = Date.now();
       }
     } catch (error) {
       console.error('Erro ao carregar notificações:', error);

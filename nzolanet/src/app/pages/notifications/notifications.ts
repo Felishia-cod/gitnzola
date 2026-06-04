@@ -1,9 +1,10 @@
 import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { Router } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { NotificationService, NotificationDTO } from '../../services/notification';
 import { FollowService, FollowDTO } from '../../services/follow';
+import { UserService, UserData } from '../../services/user';
 
 interface Activity {
   id: number;
@@ -13,6 +14,7 @@ interface Activity {
   userAvatar: string;
   action: string;
   postId?: number;
+  userId?: string;
   comment?: string;
   time: string;
 }
@@ -20,7 +22,7 @@ interface Activity {
 @Component({
   selector: 'app-notifications',
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule],
   templateUrl: './notifications.html',
   styleUrls: ['./notifications.scss']
 })
@@ -32,7 +34,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   constructor(
     private notificationService: NotificationService,
-    private followService: FollowService
+    private followService: FollowService,
+    private userService: UserService,
+    private router: Router
   ) {}
 
   ngOnInit() {
@@ -61,13 +65,43 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     this.recentActivities = apiNotifs.map((n: NotificationDTO) => ({
       id: parseInt(n.id || '0'),
       type: this.mapTipo(n.tipo),
-      userName: n.remetente_nome || 'Alguém',
-      userHandle: n.remetente_username ? `@${n.remetente_username}` : '@user',
-      userAvatar: n.remetente_foto_perfil || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E",
+      userName: (n as any).remetente_nome || (n as any).nome || (n as any).name || (n as any).display_name || (n as any).full_name || (n as any).remetente_username || (n as any).username || 'Alguém',
+      userHandle: (n as any).remetente_username ? `@${(n as any).remetente_username}` : ((n as any).username ? `@${(n as any).username}` : '@user'),
+      userAvatar: (n as any).remetente_foto_perfil || (n as any).foto_perfil || (n as any).avatar || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E",
       action: this.mapAction(n.tipo),
       postId: n.referencia_id ? parseInt(n.referencia_id) : undefined,
+      userId: n.remetente_id,
       time: this.formatTime(n.criado_em)
     }));
+    await this.fillMissingUserNames();
+  }
+
+  private async fillMissingUserNames() {
+    const idsToFetch = new Set<string>();
+    for (const a of this.recentActivities) {
+      if (a.userName === 'Alguém' && a.userId) {
+        idsToFetch.add(a.userId);
+      }
+    }
+    if (idsToFetch.size === 0) return;
+
+    const promises = Array.from(idsToFetch).map(id => this.userService.loadUserProfileById(id));
+    const results = await Promise.all(promises);
+    const userMap = new Map<string, UserData>();
+    for (const u of results) {
+      if (u) userMap.set(u.id, u);
+    }
+
+    for (const a of this.recentActivities) {
+      if (a.userName === 'Alguém' && a.userId) {
+        const user = userMap.get(a.userId);
+        if (user) {
+          a.userName = user.name;
+          a.userHandle = user.handle;
+          a.userAvatar = user.avatar;
+        }
+      }
+    }
   }
 
   private async loadPedidosPendentes() {
@@ -76,9 +110,9 @@ export class NotificationsComponent implements OnInit, OnDestroy {
     this.incomingRequests = pedidos.map((p: FollowDTO) => ({
       id: p.id,
       userId: p.seguidor_id,
-      name: p.seguidor_nome || 'Alguém',
-      handle: p.seguidor_username ? `@${p.seguidor_username}` : '@user',
-      avatar: p.seguidor_foto_perfil || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E"
+      name: (p as any).seguidor_nome || (p as any).nome || (p as any).name || (p as any).display_name || (p as any).full_name || (p as any).seguidor_username || (p as any).username || 'Alguém',
+      handle: (p as any).seguidor_username ? `@${(p as any).seguidor_username}` : ((p as any).username ? `@${(p as any).username}` : '@user'),
+      avatar: (p as any).seguidor_foto_perfil || (p as any).foto_perfil || (p as any).avatar || "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E"
     }));
   }
 
@@ -121,6 +155,14 @@ export class NotificationsComponent implements OnInit, OnDestroy {
 
   refresh() {
     this.loadData();
+  }
+
+  navigateToActivity(activity: Activity) {
+    if (activity.type === 'follow' && activity.userId) {
+      this.router.navigate(['/feed/perfil', activity.userId]);
+    } else if (activity.postId) {
+      this.router.navigate(['/feed'], { queryParams: { postId: activity.postId } });
+    }
   }
 
   private formatTime(dateString: string): string {

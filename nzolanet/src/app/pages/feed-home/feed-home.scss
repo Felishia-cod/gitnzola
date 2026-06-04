@@ -1492,3 +1492,13 @@
   border-radius: 0.5rem;
   margin-top: 0.5rem;
 }
+
+.highlight-post {
+  animation: highlightPulse 3s ease;
+}
+
+@keyframes highlightPulse {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  20% { box-shadow: 0 0 0 4px rgba(255, 90, 0, 0.3); }
+  50% { box-shadow: 0 0 0 8px rgba(255, 90, 0, 0.1); }
+}

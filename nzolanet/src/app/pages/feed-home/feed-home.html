@@ -62,7 +62,7 @@
     </div>
 
     <div class="posts-list">
-      <article class="post-card" *ngFor="let post of filteredPosts">
+      <article class="post-card" *ngFor="let post of filteredPosts" [attr.id]="'post-' + post.id">
         <div class="post-header">
           <div class="post-user" (click)="goToProfile(post.userId)" style="cursor:pointer">
             <img [src]="post.userAvatar" (error)="onImgError($event)" class="avatar-post">
@@ -80,9 +80,18 @@
               </svg>
             </button>
             <div class="menu-dropdown" *ngIf="post.showMenu">
-              <button *ngIf="isOwnPost(post)" (click)="editPost(post)">✏️ Editar</button>
-              <button *ngIf="isOwnPost(post)" (click)="deletePost(post.id)">🗑️ Eliminar</button>
-              <button *ngIf="!isOwnPost(post)" (click)="openReportPostModal(post.id, post.text, post.userName)">🚩 Denunciar</button>
+              <button *ngIf="isOwnPost(post)" (click)="editPost(post)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3l4 4-7 7H10v-4l7-7z"/><path d="M4 20h16"/></svg>
+                Editar
+              </button>
+              <button *ngIf="isOwnPost(post)" (click)="deletePost(post.id)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                Eliminar
+              </button>
+              <button *ngIf="!isOwnPost(post)" (click)="openReportPostModal(post.id, post.text, post.userName)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                Denunciar
+              </button>
             </div>
           </div>
         </div>
@@ -153,10 +162,16 @@
                   <span class="comment-time">{{ comment.time }}</span>
                   <div class="comment-actions-header">
                     <ng-container *ngIf="isOwnComment(comment)">
-                      <button class="comment-edit-btn" (click)="editComment(comment)" title="Editar">✏️</button>
-                      <button class="comment-delete-btn" (click)="deleteComment(post.id, comment.id)" title="Eliminar">🗑️</button>
+                      <button class="comment-edit-btn" (click)="editComment(comment)" title="Editar">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3l4 4-7 7H10v-4l7-7z"/><path d="M4 20h16"/></svg>
+                      </button>
+                      <button class="comment-delete-btn" (click)="deleteComment(post.id, comment.id)" title="Eliminar">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                      </button>
                     </ng-container>
-                    <button *ngIf="!isOwnComment(comment)" class="comment-report-btn" (click)="openReportCommentModal(comment.id, comment.text, comment.userName)" title="Denunciar">🚩</button>
+                    <button *ngIf="!isOwnComment(comment)" class="comment-report-btn" (click)="openReportCommentModal(comment.id, comment.text, comment.userName)" title="Denunciar">
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                    </button>
                   </div>
                 </div>
                 
@@ -173,7 +188,12 @@
                 <p class="comment-text" *ngIf="!comment.isEditing">{{ comment.text }}</p>
                 
                 <div class="comment-actions">
-                  <button class="comment-like-btn" (click)="likeComment(post.id, comment.id)">❤️ {{ comment.likes }}</button>
+                  <button class="comment-like-btn" (click)="likeComment(post.id, comment.id)">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:2px">
+                      <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                    {{ comment.likes }}
+                  </button>
                   <button class="comment-reply-btn" (click)="toggleReplyInput(comment)">Responder</button>
                 </div>
                 
@@ -192,10 +212,16 @@
                         <span class="reply-time">{{ reply.time }}</span>
                         <div class="reply-actions-header">
                           <ng-container *ngIf="isOwnReply(reply)">
-                            <button class="reply-edit-btn" (click)="editComment(reply)" title="Editar">✏️</button>
-                            <button class="reply-delete-btn" (click)="deleteComment(post.id, reply.id)" title="Eliminar">🗑️</button>
+                            <button class="reply-edit-btn" (click)="editComment(reply)" title="Editar">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3l4 4-7 7H10v-4l7-7z"/><path d="M4 20h16"/></svg>
+                            </button>
+                            <button class="reply-delete-btn" (click)="deleteComment(post.id, reply.id)" title="Eliminar">
+                              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            </button>
                           </ng-container>
-                          <button *ngIf="!isOwnReply(reply)" class="reply-report-btn" (click)="openReportCommentModal(reply.id, reply.text, reply.userName)" title="Denunciar">🚩</button>
+                          <button *ngIf="!isOwnReply(reply)" class="reply-report-btn" (click)="openReportCommentModal(reply.id, reply.text, reply.userName)" title="Denunciar">
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                          </button>
                         </div>
                       </div>
                       <div *ngIf="reply.isEditing" class="reply-edit">

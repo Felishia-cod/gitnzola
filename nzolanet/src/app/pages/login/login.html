@@ -70,3 +70,26 @@
     </div>
   </div>
 </div>
+
+<!-- MODAL DE ERRO -->
+<div class="modal-overlay" *ngIf="showErrorModal" (click)="closeErrorModalOnBackdrop($event)">
+  <div class="modal-content modal-error" (click)="$event.stopPropagation()">
+    <div class="modal-header">
+      <div class="modal-icon">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="8" x2="12" y2="12"></line>
+          <line x1="12" y1="16" x2="12.01" y2="16"></line>
+        </svg>
+      </div>
+      <h3>{{ errorTitle }}</h3>
+      <button class="modal-close" (click)="closeErrorModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p>{{ errorMessage }}</p>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn modal-btn-primary" (click)="closeErrorModal()">Entendi</button>
+    </div>
+  </div>
+</div>

@@ -232,6 +232,10 @@
   transition: all 0.2s ease;
 }
 
+.activity-item.clickable {
+  cursor: pointer;
+}
+
 .activity-item:hover {
   background: var(--muted);
   transform: translateX(2px);

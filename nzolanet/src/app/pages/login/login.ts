@@ -28,6 +28,10 @@ export class LoginComponent {
   isLoading = false;
   currentUser: any = null;
 
+  showErrorModal = false;
+  errorTitle = '';
+  errorMessage = '';
+
   constructor(
     private fb: FormBuilder,
     private auth: Auth,
@@ -80,7 +84,7 @@ export class LoginComponent {
             this.router.navigate(['/feed']);
           }
         } else {
-          alert(response.message || 'Erro ao fazer login');
+          this.showError('Erro', response.message || 'Erro ao fazer login');
         }
       },
       error: (error) => {
@@ -88,11 +92,27 @@ export class LoginComponent {
         this.isLoading = false;
         
         if (error.status === 401) {
-          alert('Email ou senha incorretos');
+          this.showError('Senha errada', 'Email ou senha incorretos');
         } else {
-          alert('Erro ao conectar com o servidor. Tente novamente.');
+          this.showError('Erro de conexão', 'Erro ao conectar com o servidor. Tente novamente.');
         }
       }
     });
+  }
+
+  showError(title: string, message: string) {
+    this.errorTitle = title;
+    this.errorMessage = message;
+    this.showErrorModal = true;
+  }
+
+  closeErrorModal() {
+    this.showErrorModal = false;
+  }
+
+  closeErrorModalOnBackdrop(event: MouseEvent) {
+    if ((event.target as HTMLElement).classList.contains('modal-overlay')) {
+      this.closeErrorModal();
+    }
   }
 }

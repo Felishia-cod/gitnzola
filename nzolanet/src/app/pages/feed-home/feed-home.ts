@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { Subscription } from 'rxjs';
 import { UserService, UserData } from '../../services/user';
 import { PostService, Post, Comment } from '../../services/post';
@@ -86,6 +86,7 @@ export class HomeComponent implements OnInit, OnDestroy {
     private postService: PostService,
     private followService: FollowService,
     private router: Router,
+    private route: ActivatedRoute,
     private cdr: ChangeDetectorRef
   ) {}
 
@@ -128,13 +129,26 @@ export class HomeComponent implements OnInit, OnDestroy {
 
     // Inscrever para atualizações de posts
     this.postsSubscription = this.postService.posts$.subscribe((posts: Post[]) => {
-
-      this.filteredPosts = [...posts].sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      this.fillPostUserNames();
-      this.loadSavedPosts();
+      this.mergeFeedWithMyPosts(posts);
     });
 
     await this.loadSuggestions();
+
+    // Scroll para post específico (vindo de notificação)
+    this.route.queryParams.subscribe(params => {
+      const postId = params['postId'];
+      if (postId) {
+        setTimeout(() => {
+          const el = document.getElementById('post-' + postId);
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            el.classList.add('highlight-post');
+            setTimeout(() => el.classList.remove('highlight-post'), 3000);
+          }
+        }, 500);
+      }
+    });
+
     this.cdr.detectChanges();
 
     // Atualizar timestamps a cada minuto
@@ -164,6 +178,19 @@ export class HomeComponent implements OnInit, OnDestroy {
     if (this.userSubscription) {
       this.userSubscription.unsubscribe();
     }
+  }
+
+  private async mergeFeedWithMyPosts(posts: Post[]) {
+    let allPosts = [...posts];
+    const myPosts = await this.postService.getUserPosts(this.me.id);
+    for (const myPost of myPosts) {
+      if (!allPosts.find(p => p.id === myPost.id)) {
+        allPosts.push(myPost);
+      }
+    }
+    this.filteredPosts = allPosts.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+    this.fillPostUserNames();
+    this.loadSavedPosts();
   }
 
   private fillPostUserNames() {
@@ -600,21 +627,31 @@ export class HomeComponent implements OnInit, OnDestroy {
 
   private fillCommentUserNames(post: Post) {
     for (const comment of post.comments) {
-      if (!comment.userName && comment.userHandle) {
+      if (!comment.userName) {
         if (comment.userId === this.me.id && this.me.name) {
           comment.userName = this.me.name;
-        } else {
+        } else if (comment.userHandle && comment.userHandle !== '@') {
           comment.userName = comment.userHandle.replace('@', '');
+        } else {
+          comment.userName = 'Utilizador';
         }
+      }
+      if (!comment.userHandle && comment.userName) {
+        comment.userHandle = '@' + comment.userName.toLowerCase().replace(/\s/g, '');
       }
       if (comment.replies) {
         for (const reply of comment.replies) {
-          if (!reply.userName && reply.userHandle) {
+          if (!reply.userName) {
             if (reply.userId === this.me.id && this.me.name) {
               reply.userName = this.me.name;
-            } else {
+            } else if (reply.userHandle && reply.userHandle !== '@') {
               reply.userName = reply.userHandle.replace('@', '');
+            } else {
+              reply.userName = 'Utilizador';
             }
+          }
+          if (!reply.userHandle && reply.userName) {
+            reply.userHandle = '@' + reply.userName.toLowerCase().replace(/\s/g, '');
           }
         }
       }

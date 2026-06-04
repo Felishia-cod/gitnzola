@@ -143,7 +143,7 @@ export class PostService {
         id: (c.id || '').toString(),
         userId: (c.user_id || c.userId || '').toString(),
         userName: userName,
-        userHandle: username ? `@${username}` : `@${(userName || '').toLowerCase().replace(/\s/g, '')}`,
+        userHandle: username ? `@${username}` : (userName ? `@${userName.toLowerCase().replace(/\s/g, '')}` : ''),
         userAvatar: this.normalizeUrl(c.autor_foto_perfil || c.user_avatar || c.foto_perfil || c.avatar || c.foto || c.profile_picture, DEFAULT_AVATAR),
         text: c.conteudo || c.text || '',
         time: this.formatTime(c.criado_em),
@@ -206,13 +206,13 @@ export class PostService {
           // Tentar obter postId da resposta
           let postId: string | null = response.data?.id || response.id || response.post_id || null;
 
-          // Fallback: buscar no feed os dados crus (evitar parseInt que dá NaN para UUIDs)
+          // Fallback: buscar os meus posts mais recentes (evita pegar post de outro utilizador)
           if (!postId) {
-            const feedRes: any = await firstValueFrom(
-              this.http.get(`${this.apiUrl}/?route=post&action=feed&page=1&limit=1`, this.getHeaders())
+            const myPostsRes: any = await firstValueFrom(
+              this.http.get(`${this.apiUrl}/?route=post&action=meusPosts&page=1&limit=1`, this.getHeaders())
             ).catch(() => null);
-            if (feedRes?.success && feedRes.data?.[0]?.id) {
-              postId = feedRes.data[0].id;
+            if (myPostsRes?.success && myPostsRes.data?.[0]?.id) {
+              postId = myPostsRes.data[0].id;
             }
           }
 
@@ -355,7 +355,7 @@ export class PostService {
       );
       if (response.success && Array.isArray(response.data)) {
         return response.data.map((u: any) => ({
-          name: u.autor_nome || u.nome || u.name || u.username || 'Alguém',
+          name: u.autor_nome || u.nome || u.name || u.username || u.autor_username || 'Alguém',
           handle: u.autor_username || u.username || ''
         }));
       }

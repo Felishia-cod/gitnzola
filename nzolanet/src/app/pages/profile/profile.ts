@@ -6,6 +6,7 @@ import { UserService, UserData } from '../../services/user';
 import { PostService, Post, Comment } from '../../services/post';
 import { Auth } from '../../services/auth';
 import { Subscription } from 'rxjs';
+import { firstValueFrom } from 'rxjs';
 
 interface User {
   id: string;
@@ -65,6 +66,18 @@ export class ProfileComponent implements OnInit, OnDestroy {
     newPassword: '',
     confirmPassword: ''
   };
+
+  showAlertModal = false;
+  alertTitle = '';
+  alertMessage = '';
+  alertType: 'error' | 'success' | 'warning' | 'info' = 'error';
+
+  isDeleting = false;
+  editingPostId = '';
+  showConfirmModal = false;
+  confirmTitle = '';
+  confirmMessage = '';
+  confirmCallback: (() => void) | null = null;
 
   private userSubscription: Subscription | null = null;
   private postsSubscription: Subscription | null = null;
@@ -143,16 +156,8 @@ export class ProfileComponent implements OnInit, OnDestroy {
       if (currentUserData) {
         await this.loadMyPosts();
       }
-      this.postsSubscription = this.postService.posts$.subscribe(posts => {
-        if (this.currentUser?.id) {
-          this.userPosts = posts.filter(p => p.userId === this.currentUser!.id && !p.eliminado);
-          this.fillPostUserNames(this.currentUser);
-          if (this.currentUser) {
-            this.currentUser.postsCount = this.userPosts.length;
-          }
-          this.cdr.detectChanges();
-        }
-      });
+      // Não subscrever ao feed global - usar apenas loadMyPosts() para o próprio perfil
+      // para garantir que posts privados são visíveis para o dono
     }
   }
 
@@ -230,10 +235,28 @@ export class ProfileComponent implements OnInit, OnDestroy {
     }
   }
 
-  openPostModal(post: Post) {
+  async openPostModal(post: Post) {
     this.selectedPost = post;
     this.newCommentText = '';
     this.showPostModal = true;
+    // Carregar comentários do backend
+    if (post.comments.length === 0) {
+      const comments = await this.postService.loadCommentsByPost(post.id);
+      post.comments = comments;
+      if (this.currentUser) {
+        for (const comment of post.comments) {
+          if (!comment.userName) {
+            if (comment.userId === this.currentUser.id && this.currentUser.name) {
+              comment.userName = this.currentUser.name;
+            } else if (comment.userHandle && comment.userHandle !== '@') {
+              comment.userName = comment.userHandle.replace('@', '');
+            } else {
+              comment.userName = 'Utilizador';
+            }
+          }
+        }
+      }
+    }
   }
 
   closePostModal() {
@@ -386,9 +409,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
         this.currentUser.bio = this.editForm.bio;
         this.currentUser.location = this.editForm.location;
       }
-      alert('Perfil atualizado com sucesso!');
+      this.showAlert('Sucesso', 'Perfil atualizado com sucesso!', 'success');
     } else {
-      alert(result.message || 'Erro ao atualizar perfil');
+      this.showAlert('Erro', result.message || 'Erro ao atualizar perfil', 'error');
     }
     
     this.closeEditModal();
@@ -405,9 +428,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
         if (url) {
           this.coverImage = url;
           localStorage.setItem('userCoverImage', url);
-          alert('Capa atualizada com sucesso!');
+          this.showAlert('Sucesso', 'Capa atualizada com sucesso!', 'success');
         } else {
-          alert('Erro ao atualizar capa');
+          this.showAlert('Erro', 'Erro ao atualizar capa', 'error');
         }
       }
     };
@@ -427,9 +450,9 @@ export class ProfileComponent implements OnInit, OnDestroy {
           if (this.currentUser) {
             this.currentUser.avatar = url;
           }
-          alert('Foto de perfil atualizada com sucesso!');
+          this.showAlert('Sucesso', 'Foto de perfil atualizada com sucesso!', 'success');
         } else {
-          alert('Erro ao atualizar foto de perfil');
+          this.showAlert('Erro', 'Erro ao atualizar foto de perfil', 'error');
         }
       }
     };
@@ -437,14 +460,15 @@ export class ProfileComponent implements OnInit, OnDestroy {
   }
 
   async removeAvatar() {
-    if (!confirm('Tens a certeza que queres remover a foto de perfil?')) return;
-    const defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E";
-    this.editForm.avatar = defaultAvatar;
-    if (this.currentUser) {
-      this.currentUser.avatar = defaultAvatar;
-    }
-    await this.userService.removeAvatar();
-    alert('Foto de perfil removida.');
+    this.showConfirm('Remover foto', 'Tens a certeza que queres remover a foto de perfil?', async () => {
+      const defaultAvatar = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Ccircle fill='%23d1d5db' cx='24' cy='15' r='9'/%3E%3Cpath fill='%23d1d5db' d='M8 44c0-9 7-16 16-16s16 7 16 16'/%3E%3C/svg%3E";
+      this.editForm.avatar = defaultAvatar;
+      if (this.currentUser) {
+        this.currentUser.avatar = defaultAvatar;
+      }
+      await this.userService.removeAvatar();
+      this.showAlert('Sucesso', 'Foto de perfil removida.', 'success');
+    });
   }
 
   goBack() {
@@ -455,32 +479,141 @@ export class ProfileComponent implements OnInit, OnDestroy {
     console.log('Seguir de volta:', userId);
   }
 
+  isOwnPost(post: Post): boolean {
+    return post.userId === this.currentUser?.id;
+  }
+
+  async toggleBaze(post: Post) {
+    const wasLiked = post.liked;
+    post.liked = !post.liked;
+    post.bazes += post.liked ? 1 : -1;
+
+    const result = post.liked
+      ? await this.postService.likePost(post.id)
+      : await this.postService.unlikePost(post.id);
+
+    if (result?.success === false) {
+      post.liked = wasLiked;
+      post.bazes += wasLiked ? 1 : -1;
+    } else {
+      this.postService.setLikedState(post.id, post.liked);
+    }
+  }
+
+  toggleMenu(post: Post) {
+    for (const p of this.userPosts) {
+      if (p !== post) p.showMenu = false;
+    }
+    post.showMenu = !post.showMenu;
+  }
+
+  editPost(post: Post) {
+    post.isEditing = true;
+    post.editText = post.text;
+    post.showMenu = false;
+  }
+
+  async saveEditPost(post: Post) {
+    if (!post.editText?.trim() || this.editingPostId === post.id) return;
+    this.editingPostId = post.id;
+    const result = await this.postService.editPost(post.id, post.editText);
+    this.editingPostId = '';
+    if (result?.success) {
+      post.text = post.editText;
+      post.isEditing = false;
+      post.editText = '';
+      this.postService.updatePost(post);
+    } else {
+      this.showAlert('Erro', result?.message || 'Erro ao editar publicação', 'error');
+    }
+  }
+
+  cancelEditPost(post: Post) {
+    post.isEditing = false;
+    post.editText = '';
+  }
+
+  async deletePost(postId: string) {
+    if (this.isDeleting) return;
+    this.showConfirm('Eliminar Publicação', 'Tem certeza que deseja eliminar esta publicação?', async () => {
+      if (this.isDeleting) return;
+      this.isDeleting = true;
+      const result = await this.postService.deletePost(postId);
+      this.isDeleting = false;
+      if (result?.success) {
+        this.userPosts = this.userPosts.filter(p => p.id !== postId);
+        if (this.currentUser) {
+          this.currentUser.postsCount = this.userPosts.length;
+        }
+      } else {
+        this.showAlert('Erro', result?.message || 'Erro ao eliminar publicação', 'error');
+      }
+    });
+  }
+
+  showAlert(title: string, message: string, type: 'error' | 'success' | 'warning' | 'info' = 'error') {
+    this.alertTitle = title;
+    this.alertMessage = message;
+    this.alertType = type;
+    this.showAlertModal = true;
+    if (type === 'success' || type === 'info') {
+      setTimeout(() => this.closeAlertModal(), 3000);
+    }
+  }
+
+  closeAlertModal() {
+    this.showAlertModal = false;
+  }
+
+  showError(title: string, message: string) {
+    this.showAlert(title, message, 'error');
+  }
+
+  showConfirm(title: string, message: string, callback: () => void) {
+    this.confirmTitle = title;
+    this.confirmMessage = message;
+    this.confirmCallback = callback;
+    this.showConfirmModal = true;
+  }
+
+  closeConfirmModal() {
+    this.showConfirmModal = false;
+    this.confirmCallback = null;
+  }
+
+  confirmAction() {
+    if (this.confirmCallback) {
+      this.confirmCallback();
+    }
+    this.closeConfirmModal();
+  }
+
   async changePassword() {
     if (!this.passwordForm.currentPassword) {
-      alert('Por favor, insira a senha atual');
+      this.showError('Erro', 'Por favor, insira a senha atual');
       return;
     }
     
     if (!this.passwordForm.newPassword) {
-      alert('Por favor, insira a nova senha');
+      this.showError('Erro', 'Por favor, insira a nova senha');
       return;
     }
     
     if (this.passwordForm.newPassword.length < 6) {
-      alert('A nova senha deve ter pelo menos 6 caracteres');
+      this.showError('Erro', 'A nova senha deve ter pelo menos 6 caracteres');
       return;
     }
     
     if (this.passwordForm.newPassword !== this.passwordForm.confirmPassword) {
-      alert('As senhas não coincidem');
+      this.showError('Erro', 'As senhas não coincidem');
       return;
     }
     
     try {
-      const result: any = await this.auth.alterarSenha(
+      const result: any = await firstValueFrom(this.auth.alterarSenha(
         this.passwordForm.currentPassword,
         this.passwordForm.newPassword
-      ).toPromise();
+      ));
       
       if (result && result.success) {
         this.passwordForm = {
@@ -488,13 +621,13 @@ export class ProfileComponent implements OnInit, OnDestroy {
           newPassword: '',
           confirmPassword: ''
         };
-        alert('Senha alterada com sucesso!');
+        this.showError('Sucesso', 'Senha alterada com sucesso!');
       } else {
-        alert(result?.message || 'Erro ao alterar senha');
+        this.showError('Erro', result?.message || 'Erro ao alterar senha');
       }
     } catch (error) {
       console.error('Erro ao alterar senha:', error);
-      alert('Erro ao alterar senha');
+      this.showError('Erro', 'Erro ao alterar senha');
     }
   }
 
